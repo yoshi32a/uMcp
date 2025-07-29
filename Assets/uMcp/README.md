@@ -40,12 +40,17 @@ A powerful Model Context Protocol (MCP) server implementation for Unity Editor t
 ### Method 1: Package Manager (Git URL)
 1. Open Unity Package Manager
 2. Click "+" → "Add package from git URL"
-3. Enter: `https://github.com/your-username/unity-mcp-server.git`
+3. Enter: `https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp`
 
 ### Method 2: Manual Installation
-1. Download the latest release
-2. Extract to `Packages/com.umcp.unity-mcp-server/`
+1. Download the latest release from [GitHub Releases](https://github.com/yoshi32a/uMcp/releases)
+2. Extract the `Assets/uMcp/` folder to your project's `Assets/` directory or `Packages/` directory
 3. Unity will automatically detect and import the package
+
+### Method 3: UnityPackage File
+1. Download the `.unitypackage` file from the [Releases page](https://github.com/yoshi32a/uMcp/releases)
+2. In Unity Editor, go to "Assets → Import Package → Custom Package"
+3. Select the downloaded `.unitypackage` file and import
 
 ## Quick Start
 

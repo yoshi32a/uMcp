@@ -4,9 +4,9 @@
   "displayName": "Unity MCP Server",
   "description": "A Model Context Protocol (MCP) server implementation for Unity Editor, enabling AI assistants to interact with Unity projects in real-time. Provides tools for asset management, console logs, test execution, and project analysis.",
   "unity": "6000.0",
-  "documentationUrl": "https://github.com/your-username/unity-mcp-server",
-  "changelogUrl": "https://github.com/your-username/unity-mcp-server/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/your-username/unity-mcp-server/blob/main/LICENSE.md",
+  "documentationUrl": "https://github.com/yoshi32a/uMcp",
+  "changelogUrl": "https://github.com/yoshi32a/uMcp/blob/master/CHANGELOG.md",
+  "licensesUrl": "https://github.com/yoshi32a/uMcp/blob/master/LICENSE.md",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -18,8 +18,8 @@
     "development"
   ],
   "author": {
-    "name": "Unity MCP Server Team",
-    "email": "contact@example.com"
+    "name": "yoshi32a",
+    "email": "yoshi32a.spl@gmail.com"
   },
   "dependencies": {
     "com.cysharp.unitask": "2.3.3"

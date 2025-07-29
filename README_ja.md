@@ -114,6 +114,18 @@ MCPクライアント設定に以下を追加：
 }
 ```
 
+### GitHub Copilot
+GitHub CopilotのMCP統合で使用する場合：
+
+1. IDEにGitHub Copilot拡張機能をインストール
+2. Copilotの設定/構成を開く
+3. Unity MCP Serverエンドポイントを追加：
+   - サーバーURL: `http://localhost:49001/umcp/`
+   - プロトコル: HTTP
+   - メソッド: POST
+
+注意：GitHub CopilotのMCPサポートは特定バージョンまたはプレビュー機能が必要な場合があります。
+
 ## 開発
 
 ### カスタムツールの作成

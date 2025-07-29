@@ -114,6 +114,18 @@ Configure in your MCP client settings:
 }
 ```
 
+### GitHub Copilot
+To use with GitHub Copilot's MCP integration:
+
+1. Install the GitHub Copilot extension in your IDE
+2. Open Copilot settings/configuration
+3. Add the Unity MCP Server endpoint:
+   - Server URL: `http://localhost:49001/umcp/`
+   - Protocol: HTTP
+   - Method: POST
+
+Note: MCP support in GitHub Copilot may require specific versions or preview features.
+
 ## Development
 
 ### Creating Custom Tools

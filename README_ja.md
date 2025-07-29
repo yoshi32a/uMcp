@@ -162,20 +162,19 @@ Unity MCP Serverは、ドメインリロード最適化による高度なPlayMod
 - `timeoutSeconds` - テスト実行のタイムアウト設定
 - アセンブリとカテゴリーフィルタリング対応
 
-**パフォーマンス比較：**
-- 従来のPlayModeテスト：ドメインリロードありで60秒以上
-- 最適化されたPlayModeテスト：ドメインリロードなしで約0.25秒
+**パフォーマンス向上：**
+- ドメインリロードを無効化することで、PlayModeテストの実行時間を大幅に短縮
+- HTTP経由でのMCPリクエストでも実用的な速度で実行可能
 
 ### EditModeテスト実行
 
 - 標準Unity Test Framework統合
 - 設定可能なタイムアウトとフィルタリングオプション
-- 一般的なテストスイートでの実行時間：約0.6秒
 
 ## 動作要件
 
 - **Unity**: 6000.0以降
-- **UniTask**: 2.3.3以降（自動インストール）
+- **UniTask**: 2.3.3以降
 - **.NET**: Unity対応の.NET実装
 
 ## トラブルシューティング
@@ -211,18 +210,33 @@ Unity MCP Serverは、ドメインリロード最適化による高度なPlayMod
 ## アーキテクチャ
 
 ```
-Unity MCP Server
-├── Core/
-│   ├── UMcpServer.cs          # HTTPサーバー実装
-│   ├── UMcpServerManager.cs   # Unity統合・ライフサイクル
-│   └── UMcpToolBuilder.cs     # ツール登録基底クラス
-├── Settings/
-│   └── UMcpSettings.cs        # 設定管理
-└── Tools/
-    ├── UnityInfoTool.cs       # Unity情報ツール
-    ├── AssetManagementTool.cs # アセット操作
-    ├── ConsoleLogTool.cs      # コンソールログ管理
-    └── TestRunnerTool.cs      # テスト実行ツール
+Assets/uMcp/
+├── package.json               # Unityパッケージ定義
+├── README.md                  # 英語ドキュメント
+└── Editor/                    # エディター拡張実装
+    ├── uMCP.Editor.asmdef     # アセンブリ定義
+    ├── Attributes/            # カスタム属性
+    │   ├── McpToolAttribute.cs        # ツールクラス属性
+    │   └── McpToolMethodAttribute.cs  # ツールメソッド属性
+    ├── Core/                  # MCPサーバーコア
+    │   ├── UMcpServer.cs              # HTTPサーバー実装
+    │   ├── UMcpServerManager.cs       # Unity統合・ライフサイクル管理
+    │   └── UMcpToolBuilder.cs         # ツール登録基底クラス
+    ├── Settings/              # 設定管理
+    │   └── UMcpSettings.cs            # プロジェクト設定ScriptableSingleton
+    └── Tools/                 # ビルトインツール実装
+        ├── UnityInfo/         # Unity情報ツール
+        │   ├── UnityInfoTool.cs
+        │   └── UnityInfoToolImplementation.cs
+        ├── AssetManagement/   # アセット管理ツール
+        │   ├── AssetManagementTool.cs
+        │   └── AssetManagementToolImplementation.cs
+        ├── ConsoleLog/        # コンソールログツール
+        │   ├── ConsoleLogTool.cs
+        │   └── ConsoleLogToolImplementation.cs
+        └── TestRunner/        # テスト実行ツール
+            ├── TestRunnerTool.cs
+            └── TestRunnerToolImplementation.cs
 ```
 
 ## 貢献

@@ -211,18 +211,33 @@ The Unity MCP Server includes advanced PlayMode test execution with domain reloa
 ## Architecture
 
 ```
-Unity MCP Server
-├── Core/
-│   ├── UMcpServer.cs          # HTTP server implementation
-│   ├── UMcpServerManager.cs   # Unity integration & lifecycle
-│   └── UMcpToolBuilder.cs     # Tool registration base class
-├── Settings/
-│   └── UMcpSettings.cs        # Configuration management
-└── Tools/
-    ├── UnityInfoTool.cs       # Unity information tools
-    ├── AssetManagementTool.cs # Asset operations
-    ├── ConsoleLogTool.cs      # Console log management
-    └── TestRunnerTool.cs      # Test execution tools
+Assets/uMcp/
+├── package.json               # Unity package manifest
+├── README.md                  # This documentation
+└── Editor/                    # Editor extension implementation
+    ├── uMCP.Editor.asmdef     # Assembly definition
+    ├── Attributes/            # Custom attributes
+    │   ├── McpToolAttribute.cs        # Tool class attribute
+    │   └── McpToolMethodAttribute.cs  # Tool method attribute
+    ├── Core/                  # MCP server core
+    │   ├── UMcpServer.cs              # HTTP server implementation
+    │   ├── UMcpServerManager.cs       # Unity integration & lifecycle
+    │   └── UMcpToolBuilder.cs         # Tool registration base class
+    ├── Settings/              # Configuration
+    │   └── UMcpSettings.cs            # Project settings ScriptableSingleton
+    └── Tools/                 # Built-in tool implementations
+        ├── UnityInfo/         # Unity information tools
+        │   ├── UnityInfoTool.cs
+        │   └── UnityInfoToolImplementation.cs
+        ├── AssetManagement/   # Asset management tools
+        │   ├── AssetManagementTool.cs
+        │   └── AssetManagementToolImplementation.cs
+        ├── ConsoleLog/        # Console log tools
+        │   ├── ConsoleLogTool.cs
+        │   └── ConsoleLogToolImplementation.cs
+        └── TestRunner/        # Test execution tools
+            ├── TestRunnerTool.cs
+            └── TestRunnerToolImplementation.cs
 ```
 
 ## Contributing

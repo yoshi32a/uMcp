@@ -101,18 +101,16 @@ Unity MCP Serverをインストールする前に、必要な依存関係をセ�
 3. URL入力：`http://localhost:49001/umcp/`
 4. Connectをクリック
 
-### Claude Code
-MCPクライアント設定に以下を追加：
-```json
-{
-  "mcpServers": {
-    "unity-mcp": {
-      "command": "curl",
-      "args": ["-X", "POST", "http://localhost:49001/umcp/"]
-    }
-  }
-}
+### Claude CLI
+Unity MCP ServerをClaude CLIで使用するには、以下のコマンドで設定に追加します：
+
+```bash
+claude mcp add -s project --transport http unity-mcp-server http://localhost:49001/umcp/
 ```
+
+これによりUnity MCP Serverがプロジェクトの MCP 設定に追加されます。
+
+**注意：** Claude CLIを使用する前に、Unity EditorでMCPサーバーが起動していることを確認してください。
 
 ### GitHub Copilot
 GitHub CopilotのMCP統合で使用する場合：

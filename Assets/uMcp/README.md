@@ -101,18 +101,16 @@ Access settings via `Tools > uMCP > Open Settings`:
 3. Enter URL: `http://localhost:49001/umcp/`
 4. Click Connect
 
-### Claude Code
-Configure in your MCP client settings:
-```json
-{
-  "mcpServers": {
-    "unity-mcp": {
-      "command": "curl",
-      "args": ["-X", "POST", "http://localhost:49001/umcp/"]
-    }
-  }
-}
+### Claude CLI
+To use Unity MCP Server with Claude CLI, add it to your configuration:
+
+```bash
+claude mcp add -s project --transport http unity-mcp-server http://localhost:49001/umcp/
 ```
+
+This will add the Unity MCP Server to your project's MCP configuration.
+
+**Note:** Ensure Unity Editor is running with the MCP server started before using Claude CLI.
 
 ### GitHub Copilot
 To use with GitHub Copilot's MCP integration:

@@ -13,7 +13,7 @@ This sample demonstrates how to use the built-in MCP tools and create custom too
 1. **Import this sample** through Package Manager
 2. **Create Default Tool Assets**: Go to `Tools > uMCP > Create Default Tool Assets`
 3. **Start the Server**: The server should auto-start, or use `Tools > uMCP > Start Server`
-4. **Test Connection**: Use MCP Inspector at `http://localhost:49001/umcp/`
+4. **Test Connection**: Use MCP Inspector at `http://127.0.0.1:49001/umcp/`
 
 ## Available Tools
 
@@ -44,7 +44,7 @@ After setup, you'll have access to these tools:
 1. Open [MCP Inspector](https://inspector.mcp.run/) in your browser
 2. Configure connection:
    - **Transport**: HTTP
-   - **URL**: `http://localhost:49001/umcp/`
+   - **URL**: `http://127.0.0.1:49001/umcp/`
 3. Click **Connect**
 4. Try executing tools like `get_unity_info` or `get_scene_info`
 

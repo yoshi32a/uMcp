@@ -5,7 +5,7 @@ A powerful Model Context Protocol (MCP) server implementation for Unity Editor t
 ## Features
 
 ### 🚀 Core MCP Server
-- **HTTP Server**: Runs on `localhost:49001/umcp/` by default
+- **HTTP Server**: Runs on `127.0.0.1:49001/umcp/` by default
 - **JSON-RPC 2.0**: Full MCP protocol compliance
 - **Real-time Communication**: Direct integration with Unity Editor
 - **Auto-start**: Automatically starts when Unity Editor loads
@@ -81,7 +81,7 @@ Before installing Unity MCP Server, you need to set up the required dependencies
 1. **Auto-start Server**: Server starts automatically when Unity loads
 2. **Manual Control**: Use `Tools > uMCP` menu for server management
 3. **Create Tool Assets**: Run `Tools > uMCP > Create Default Tool Assets`
-4. **Test Connection**: Connect MCP Inspector to `http://localhost:49001/umcp/`
+4. **Test Connection**: Connect MCP Inspector to `http://127.0.0.1:49001/umcp/`
 
 ## Configuration
 
@@ -98,14 +98,14 @@ Access settings via `Tools > uMCP > Open Settings`:
 ### MCP Inspector
 1. Open [MCP Inspector](https://inspector.mcp.run/)
 2. Set Transport to `HTTP`
-3. Enter URL: `http://localhost:49001/umcp/`
+3. Enter URL: `http://127.0.0.1:49001/umcp/`
 4. Click Connect
 
 ### Claude CLI
 To use Unity MCP Server with Claude CLI, add it to your configuration:
 
 ```bash
-claude mcp add -s project --transport http unity-mcp-server http://localhost:49001/umcp/
+claude mcp add -s project --transport http unity-mcp-server http://127.0.0.1:49001/umcp/
 ```
 
 This will add the Unity MCP Server to your project's MCP configuration.
@@ -118,7 +118,7 @@ To use with GitHub Copilot's MCP integration:
 1. Install the GitHub Copilot extension in your IDE
 2. Open Copilot settings/configuration
 3. Add the Unity MCP Server endpoint:
-   - Server URL: `http://localhost:49001/umcp/`
+   - Server URL: `http://127.0.0.1:49001/umcp/`
    - Protocol: HTTP
    - Method: POST
 

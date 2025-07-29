@@ -1,0 +1,47 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
+using ModelContextProtocol.Server;
+using uMCP.Editor.Attributes;
+using UnityEngine;
+
+namespace uMCP.Editor.Core
+{
+    /// <summary>MCPツールの自動登録を管理するクラス</summary>
+    public static class UMcpToolRegistry
+    {
+        /// <summary>属性ベースのツールを自動的に登録します</summary>
+        public static IServiceCollection RegisterAttributeTools(this IServiceCollection services, Assembly assembly = null)
+        {
+            assembly ??= Assembly.GetExecutingAssembly();
+            
+            var toolTypes = assembly.GetTypes()
+                .Where(t => t.GetCustomAttribute<McpToolAttribute>() != null)
+                .Where(t => !t.IsAbstract && t.IsClass)
+                .OrderBy(t => t.GetCustomAttribute<McpToolAttribute>()?.Order ?? 0);
+
+            foreach (var toolType in toolTypes)
+            {
+                var attribute = toolType.GetCustomAttribute<McpToolAttribute>();
+                if (!attribute.Enabled)
+                    continue;
+
+                try
+                {
+                    // サービスコレクションにツールクラスを登録
+                    services.AddSingleton(toolType);
+                    
+                    Debug.Log($"[uMCP] Registered tool class: {toolType.Name}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[uMCP] Failed to register tool '{toolType.Name}': {ex.Message}");
+                }
+            }
+
+            return services;
+        }
+    }
+}

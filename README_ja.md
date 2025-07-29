@@ -35,22 +35,46 @@ Unity EditorとAIアシスタントがリアルタイムで連携できる、強
 - `run_play_mode_tests` - ドメインリロード制御付きPlayModeテスト実行
 - `get_available_tests` - モード別利用可能テスト一覧取得（EditMode/PlayMode/All）
 
+## 事前準備
+
+Unity MCP Serverをインストールする前に、必要な依存関係をセットアップする必要があります：
+
+### 1. UniTaskのインストール
+1. Unity Package Managerを開く
+2. 「+」→「Add package from git URL」をクリック
+3. URL入力：`https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
+
+### 2. NuGetForUnityのインストール
+1. Unity Package Managerを開く
+2. 「+」→「Add package from git URL」をクリック
+3. URL入力：`https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
+
+### 3. ModelContextProtocolのNuGet経由インストール
+1. NuGetForUnityのインストール完了後、`NuGet → Manage NuGet Packages`を選択
+2. 「ModelContextProtocol」を検索
+3. `ModelContextProtocol` バージョン `0.3.0-preview.2` 以降をインストール
+4. `Microsoft.Extensions.DependencyInjection` バージョン `9.0.7` 以降もインストール
+5. `System.Text.Json` バージョン `9.0.7` 以降もインストール
+
 ## インストール方法
 
 ### 方法1: Package Manager（Git URL）
-1. Unity Package Managerを開く
-2. 「+」→「Add package from git URL」をクリック
-3. URL入力：`https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp`
+1. まず[事前準備](#事前準備)を完了してください
+2. Unity Package Managerを開く
+3. 「+」→「Add package from git URL」をクリック
+4. URL入力：`https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp`
 
 ### 方法2: 手動インストール
-1. 最新リリースをダウンロード
-2. `Assets/uMcp/`フォルダーをプロジェクトの`Assets/`またはパッケージディレクトリにコピー
-3. Unityが自動的にパッケージを検出・インポート
+1. まず[事前準備](#事前準備)を完了してください
+2. [GitHub Releases](https://github.com/yoshi32a/uMcp/releases)から最新リリースをダウンロード
+3. `Assets/uMcp/`フォルダーをプロジェクトの`Assets/`またはパッケージディレクトリにコピー
+4. Unityが自動的にパッケージを検出・インポート
 
 ### 方法3: UnityPackageファイル
-1. Releasesページから`.unitypackage`ファイルをダウンロード
-2. Unity Editorで「Assets → Import Package → Custom Package」を選択
-3. ダウンロードした`.unitypackage`ファイルを選択してインポート
+1. まず[事前準備](#事前準備)を完了してください
+2. [Releasesページ](https://github.com/yoshi32a/uMcp/releases)から`.unitypackage`ファイルをダウンロード
+3. Unity Editorで「Assets → Import Package → Custom Package」を選択
+4. ダウンロードした`.unitypackage`ファイルを選択してインポート
 
 ## クイックスタート
 

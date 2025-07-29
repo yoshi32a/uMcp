@@ -35,22 +35,46 @@ A powerful Model Context Protocol (MCP) server implementation for Unity Editor t
 - `run_play_mode_tests` - Execute PlayMode tests with domain reload control
 - `get_available_tests` - List available tests by mode (EditMode/PlayMode/All)
 
+## Prerequisites
+
+Before installing Unity MCP Server, you need to set up the required dependencies:
+
+### 1. Install UniTask
+1. Open Unity Package Manager
+2. Click "+" → "Add package from git URL"
+3. Enter: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
+
+### 2. Install NuGetForUnity
+1. Open Unity Package Manager
+2. Click "+" → "Add package from git URL"
+3. Enter: `https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
+
+### 3. Install ModelContextProtocol via NuGet
+1. After NuGetForUnity is installed, go to `NuGet → Manage NuGet Packages`
+2. Search for "ModelContextProtocol"
+3. Install `ModelContextProtocol` version `0.3.0-preview.2` or later
+4. Also install `Microsoft.Extensions.DependencyInjection` version `9.0.7` or later
+5. Install `System.Text.Json` version `9.0.7` or later
+
 ## Installation
 
 ### Method 1: Package Manager (Git URL)
-1. Open Unity Package Manager
-2. Click "+" → "Add package from git URL"
-3. Enter: `https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp`
+1. Complete the [Prerequisites](#prerequisites) setup first
+2. Open Unity Package Manager
+3. Click "+" → "Add package from git URL"
+4. Enter: `https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp`
 
 ### Method 2: Manual Installation
-1. Download the latest release from [GitHub Releases](https://github.com/yoshi32a/uMcp/releases)
-2. Extract the `Assets/uMcp/` folder to your project's `Assets/` directory or `Packages/` directory
-3. Unity will automatically detect and import the package
+1. Complete the [Prerequisites](#prerequisites) setup first
+2. Download the latest release from [GitHub Releases](https://github.com/yoshi32a/uMcp/releases)
+3. Extract the `Assets/uMcp/` folder to your project's `Assets/` directory or `Packages/` directory
+4. Unity will automatically detect and import the package
 
 ### Method 3: UnityPackage File
-1. Download the `.unitypackage` file from the [Releases page](https://github.com/yoshi32a/uMcp/releases)
-2. In Unity Editor, go to "Assets → Import Package → Custom Package"
-3. Select the downloaded `.unitypackage` file and import
+1. Complete the [Prerequisites](#prerequisites) setup first
+2. Download the `.unitypackage` file from the [Releases page](https://github.com/yoshi32a/uMcp/releases)
+3. In Unity Editor, go to "Assets → Import Package → Custom Package"
+4. Select the downloaded `.unitypackage` file and import
 
 ## Quick Start
 

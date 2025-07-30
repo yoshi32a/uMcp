@@ -26,6 +26,13 @@ namespace uMCP.Editor.Core
         bool isRunning;
         SimpleServiceContainer serviceContainer;
 
+        /// <summary>共通のJSON設定</summary>
+        static readonly JsonSerializerOptions jsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
         /// <summary>サーバーが実行中かどうかを示すフラグ</summary>
         public bool IsRunning => isRunning;
 
@@ -223,11 +230,7 @@ namespace uMCP.Editor.Core
                         response.StatusCode = 405;
                         response.ContentType = "application/json";
                         var errorResponse = new JsonRpcError { Code = -32601, Message = "Method not allowed" };
-                        var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
-                        {
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                        });
+                        var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
                         await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                         break;
                 }
@@ -240,11 +243,7 @@ namespace uMCP.Editor.Core
                     response.StatusCode = 500;
                     response.ContentType = "application/json";
                     var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.InternalError, Message = $"Internal server error: {ex.Message}" };
-                    var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                    });
+                    var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
                     await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                 }
                 catch
@@ -279,11 +278,7 @@ namespace uMCP.Editor.Core
                 response.StatusCode = 400;
                 response.ContentType = "application/json";
                 var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.InvalidRequest, Message = "Empty request body" };
-                var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                });
+                var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
                 await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                 return;
             }
@@ -291,21 +286,14 @@ namespace uMCP.Editor.Core
             JsonRpcRequest jsonRpcRequest;
             try
             {
-                jsonRpcRequest = JsonSerializer.Deserialize<JsonRpcRequest>(inputBody, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+                jsonRpcRequest = JsonSerializer.Deserialize<JsonRpcRequest>(inputBody, jsonOptions);
             }
             catch (Exception ex)
             {
                 response.StatusCode = 400;
                 response.ContentType = "application/json";
                 var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.ParseError, Message = $"Invalid JSON: {ex.Message}" };
-                var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                });
+                var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
                 await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                 return;
             }
@@ -328,11 +316,7 @@ namespace uMCP.Editor.Core
             var mcpResponse = await ProcessMcpRequest(jsonRpcRequest, mcpSession, token);
 
             // レスポンスをシリアライズ
-            var responseJson = JsonSerializer.Serialize(mcpResponse, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
+            var responseJson = JsonSerializer.Serialize(mcpResponse, jsonOptions);
 
             if (settings.debugMode)
             {
@@ -801,17 +785,21 @@ namespace uMCP.Editor.Core
         /// <summary>GETリクエストを処理します（サーバーステータス）</summary>
         async UniTask HandleGetRequest(HttpListenerResponse response)
         {
-            var statusJson = @"{
-    ""jsonrpc"": ""2.0"",
-    ""result"": {
-        ""status"": ""running"",
-        ""server"": ""uMCP for Unity"",
-        ""version"": """ + UMcpSettings.Version + @""",
-        ""unity_version"": """ + Application.unityVersion + @""",
-        ""platform"": """ + Application.platform.ToString() + @"""
-    },
-    ""id"": null
-}";
+            var statusResponse = new JsonRpcResponse
+            {
+                Id = null,
+                Result = new
+                {
+                    status = "running",
+                    server = "uMCP for Unity",
+                    version = UMcpSettings.Version,
+                    unity_version = Application.unityVersion,
+                    platform = Application.platform.ToString()
+                }
+            };
+
+            var statusJson = JsonSerializer.Serialize(statusResponse, jsonOptions);
+
             response.StatusCode = 200;
             response.ContentType = "application/json";
             await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(statusJson));

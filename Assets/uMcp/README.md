@@ -48,12 +48,10 @@ Before installing Unity MCP Server, you need to set up the required dependencies
 2. Click "+" → "Add package from git URL"
 3. Enter: `https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
 
-### 3. Install ModelContextProtocol via NuGet
+### 3. Install System.Text.Json via NuGet
 1. After NuGetForUnity is installed, go to `NuGet → Manage NuGet Packages`
-2. Search for "ModelContextProtocol"
-3. Install `ModelContextProtocol` version `0.3.0-preview.2` or later
-4. Also install `Microsoft.Extensions.DependencyInjection` version `9.0.7` or later
-5. Install `System.Text.Json` version `9.0.7` or later
+2. Search for "System.Text.Json"
+3. Install `System.Text.Json` version `9.0.7` or later
 
 ## Installation
 

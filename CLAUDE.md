@@ -34,7 +34,7 @@
 - **ScriptableObject統合**: Unity標準のアセット管理システムとの統合
 
 ### Unity統合機能
-- **uMCP.Editor.asmdef**: UniTask、ModelContextProtocol依存のEditorアセンブリ
+- **uMCP.Editor.asmdef**: UniTask、System.Text.Json依存のEditorアセンブリ
 - **メインスレッド同期**: すべてのUnity API呼び出しで`UniTask.SwitchToMainThread()`を使用
 - **メニュー統合**: `Tools > uMCP`でのサーバー管理とツールアセット作成
 
@@ -67,7 +67,7 @@
 - **Unity Editor標準API**: アセット管理、コンソール、シーン操作
 
 ### 組み込みNuGetパッケージ
-- **ModelContextProtocol (0.3.0+)**: MCPサーバー実装のコア
+- **System.Text.Json (9.0.7+)**: JSON シリアライゼーション（独自MCPプロトコル実装）
 - **Microsoft.Extensions.DependencyInjection**: 依存性注入システム
 - **System.IO.Pipelines**: 高性能I/O処理
 

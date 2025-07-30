@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Nodes;
 using System.Threading;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
+using uMCP.Editor.Core.Attributes;
 using uMCP.Editor.Core.DependencyInjection;
 using uMCP.Editor.Core.Protocol;
 using UnityEditor;
@@ -312,10 +316,16 @@ namespace uMCP.Editor.Core
 
             // レスポンスヘッダーを設定
             response.StatusCode = 200;
-            response.ContentType = "application/json";
+            response.ContentType = "application/json; charset=utf-8";
             response.Headers.Add("Mcp-Session-Id", sessionId);
+            
+            // Streamable HTTP用の追加ヘッダー
+            response.Headers.Add("Cache-Control", "no-cache");
+            response.Headers.Add("Connection", "keep-alive");
 
-            await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(responseJson), token);
+            var responseBytes = Encoding.UTF8.GetBytes(responseJson);
+            response.ContentLength64 = responseBytes.Length;
+            await response.OutputStream.WriteAsync(responseBytes, token);
         }
 
         /// <summary>MCPリクエストを直接処理します</summary>
@@ -382,7 +392,7 @@ namespace uMCP.Editor.Core
         {
             return new InitializeResult
             {
-                ProtocolVersion = "0.1.0",
+                ProtocolVersion = "2024-11-05",
                 Capabilities = new ServerCapabilities
                 {
                     Tools = new { }
@@ -415,24 +425,98 @@ namespace uMCP.Editor.Core
         /// <summary>ビルトインツールの情報を取得します</summary>
         List<ToolInfo> GetBuiltinToolInfo()
         {
-            return new List<ToolInfo>
+            var tools = new List<ToolInfo>();
+            
+            // サービスコンテナからツール情報を自動生成
+            foreach (var serviceKvp in serviceContainer.Services)
             {
-                new ToolInfo { Name = "get_unity_info", Description = "Unity エディターとプロジェクトの詳細情報を取得", InputSchema = new Dictionary<string, object> { ["type"] = "object", ["properties"] = new Dictionary<string, object>() } },
-                new ToolInfo { Name = "get_scene_info", Description = "現在のシーン構造とGameObject分析", InputSchema = new Dictionary<string, object> { ["type"] = "object", ["properties"] = new Dictionary<string, object>() } },
-                new ToolInfo { Name = "log_message", Description = "Unity コンソールへのログ出力", InputSchema = CreateLogMessageSchema() },
-                new ToolInfo { Name = "refresh_assets", Description = "アセットデータベースのリフレッシュ", InputSchema = new Dictionary<string, object> { ["type"] = "object", ["properties"] = new Dictionary<string, object>() } },
-                new ToolInfo { Name = "save_project", Description = "プロジェクトとアセットの保存", InputSchema = new Dictionary<string, object> { ["type"] = "object", ["properties"] = new Dictionary<string, object>() } },
-                new ToolInfo { Name = "find_assets", Description = "フィルターによるアセット検索", InputSchema = CreateFindAssetsSchema() },
-                new ToolInfo { Name = "get_asset_info", Description = "アセットの詳細情報取得", InputSchema = CreateGetAssetInfoSchema() },
-                new ToolInfo { Name = "reimport_asset", Description = "指定アセットの強制再インポート", InputSchema = CreateReimportAssetSchema() },
-                new ToolInfo { Name = "get_console_logs", Description = "Unity コンソールログの取得とフィルタリング", InputSchema = CreateGetConsoleLogsSchema() },
-                new ToolInfo { Name = "clear_console_logs", Description = "コンソールログの全クリア", InputSchema = new Dictionary<string, object> { ["type"] = "object", ["properties"] = new Dictionary<string, object>() } },
-                new ToolInfo { Name = "log_to_console", Description = "カスタムメッセージのコンソール出力", InputSchema = CreateLogToConsoleSchema() },
-                new ToolInfo { Name = "get_log_statistics", Description = "ログ統計情報の取得", InputSchema = new Dictionary<string, object> { ["type"] = "object", ["properties"] = new Dictionary<string, object>() } },
-                new ToolInfo { Name = "run_edit_mode_tests", Description = "EditModeテストの実行と結果取得", InputSchema = CreateRunTestsSchema() },
-                new ToolInfo { Name = "run_play_mode_tests", Description = "PlayModeテストの高速実行", InputSchema = CreateRunTestsSchema() },
-                new ToolInfo { Name = "get_available_tests", Description = "利用可能なテスト一覧の取得", InputSchema = CreateGetAvailableTestsSchema() }
+                var serviceType = serviceKvp.Key;
+                
+                // McpServerToolType属性があるかチェック
+                if (serviceType.GetCustomAttribute<McpServerToolTypeAttribute>() == null)
+                    continue;
+
+                // 各メソッドを確認
+                foreach (var method in serviceType.GetMethods(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    var toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
+                    if (toolAttr == null) continue;
+
+                    var descAttr = method.GetCustomAttribute<DescriptionAttribute>();
+                    var toolName = ConvertToSnakeCase(method.Name);
+                    var inputSchema = GenerateInputSchema(method);
+
+                    tools.Add(new ToolInfo
+                    {
+                        Name = toolName,
+                        Description = descAttr?.Description ?? "",
+                        InputSchema = inputSchema
+                    });
+                }
+            }
+            
+            return tools;
+        }
+
+        /// <summary>メソッドからInputSchemaを生成します</summary>
+        Dictionary<string, object> GenerateInputSchema(MethodInfo method)
+        {
+            var parameters = method.GetParameters();
+            var properties = new Dictionary<string, object>();
+            var required = new List<string>();
+
+            foreach (var param in parameters)
+            {
+                if (param.ParameterType == typeof(CancellationToken))
+                    continue;
+
+                var paramSchema = new Dictionary<string, object>
+                {
+                    ["type"] = GetJsonSchemaType(param.ParameterType)
+                };
+
+                var descAttr = param.GetCustomAttribute<DescriptionAttribute>();
+                if (descAttr != null)
+                {
+                    paramSchema["description"] = descAttr.Description;
+                }
+
+                if (param.HasDefaultValue && param.DefaultValue != null)
+                {
+                    paramSchema["default"] = param.DefaultValue;
+                }
+
+                properties[param.Name] = paramSchema;
+
+                if (!param.HasDefaultValue)
+                {
+                    required.Add(param.Name);
+                }
+            }
+
+            var schema = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = properties
             };
+
+            if (required.Count > 0)
+            {
+                schema["required"] = required;
+            }
+
+            return schema;
+        }
+
+        /// <summary>型からJSONスキーマタイプを取得します</summary>
+        string GetJsonSchemaType(Type type)
+        {
+            if (type == typeof(string)) return "string";
+            if (type == typeof(int) || type == typeof(long)) return "integer";
+            if (type == typeof(float) || type == typeof(double)) return "number";
+            if (type == typeof(bool)) return "boolean";
+            if (type.IsArray || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))) return "array";
+            return "object";
         }
 
         /// <summary>カスタムツールの情報を取得します</summary>
@@ -490,60 +574,155 @@ namespace uMCP.Editor.Core
         /// <summary>ツールを実行します</summary>
         async UniTask<string> ExecuteTool(string toolName, Dictionary<string, object> arguments, CancellationToken token)
         {
-            // 引数をJSONに変換して汎用的に処理
-            var argsJson = arguments != null ? JsonSerializer.Serialize(arguments) : "{}";
+            // サービスコンテナから適切なツールインスタンスを取得して実行
+            var toolResult = await ExecuteToolUsingReflection(toolName, arguments, token);
+            return JsonSerializer.Serialize(toolResult);
+        }
 
-            switch (toolName)
+        /// <summary>リフレクションを使用してツールを自動実行します</summary>
+        async UniTask<object> ExecuteToolUsingReflection(string toolName, Dictionary<string, object> arguments, CancellationToken token)
+        {
+            // サービスコンテナからすべてのツール実装を取得
+            foreach (var serviceKvp in serviceContainer.Services)
             {
-                case "get_unity_info":
-                    var unityInfoTool = new Tools.UnityInfoToolImplementation();
-                    var unityInfo = await unityInfoTool.GetUnityInfo();
-                    return JsonSerializer.Serialize(unityInfo);
+                var serviceType = serviceKvp.Key;
+                var serviceInstance = serviceKvp.Value;
 
-                case "get_scene_info":
-                    var sceneInfoTool = new Tools.UnityInfoToolImplementation();
-                    var sceneInfo = await sceneInfoTool.GetSceneInfo();
-                    return JsonSerializer.Serialize(sceneInfo);
+                // McpServerToolType属性があるかチェック
+                if (serviceType.GetCustomAttribute<McpServerToolTypeAttribute>() == null)
+                    continue;
 
-                case "log_message":
-                    var logTool = new Tools.UnityInfoToolImplementation();
-                    var message = arguments?.ContainsKey("message") == true ? arguments["message"].ToString() : "";
-                    var logType = arguments?.ContainsKey("logType") == true ? arguments["logType"].ToString() : "log";
-                    var logResult = await logTool.LogMessage(message, logType);
-                    return JsonSerializer.Serialize(logResult);
+                // 該当するメソッドを探す
+                foreach (var method in serviceType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    var toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
+                    if (toolAttr == null) continue;
 
-                case "refresh_assets":
-                    var assetTool = new Tools.AssetManagementToolImplementation();
-                    var refreshResult = await assetTool.RefreshAssets();
-                    return JsonSerializer.Serialize(refreshResult);
+                    var methodToolName = ConvertToSnakeCase(method.Name);
+                    if (methodToolName != toolName)
+                        continue;
 
-                case "save_project":
-                    var saveTool = new Tools.AssetManagementToolImplementation();
-                    var saveResult = await saveTool.SaveProject();
-                    return JsonSerializer.Serialize(saveResult);
+                    // メソッドのパラメータを準備
+                    var parameters = method.GetParameters();
+                    var args = new object[parameters.Length];
 
-                case "get_console_logs":
-                    var consoleTool = new Tools.ConsoleLogToolImplementation();
-                    var maxCount = arguments?.ContainsKey("maxCount") == true ? 
-                        Convert.ToInt32(arguments["maxCount"]) : 20;
-                    var errorsOnly = arguments?.ContainsKey("errorsOnly") == true ? 
-                        Convert.ToBoolean(arguments["errorsOnly"]) : false;
-                    var includeWarnings = arguments?.ContainsKey("includeWarnings") == true ? 
-                        Convert.ToBoolean(arguments["includeWarnings"]) : true;
-                    var maxMessageLength = arguments?.ContainsKey("maxMessageLength") == true ? 
-                        Convert.ToInt32(arguments["maxMessageLength"]) : 500;
-                    var consoleResult = await consoleTool.GetConsoleLogs(maxCount, errorsOnly, includeWarnings, maxMessageLength);
-                    return JsonSerializer.Serialize(consoleResult);
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        var param = parameters[i];
+                        if (param.ParameterType == typeof(CancellationToken))
+                        {
+                            args[i] = token;
+                        }
+                        else if (arguments != null && arguments.ContainsKey(param.Name))
+                        {
+                            args[i] = ConvertArgument(arguments[param.Name], param.ParameterType);
+                        }
+                        else if (param.HasDefaultValue)
+                        {
+                            args[i] = param.DefaultValue;
+                        }
+                        else
+                        {
+                            // 必須パラメータの場合はデフォルト値を設定
+                            args[i] = GetDefaultValue(param.ParameterType);
+                        }
+                    }
 
-                case "clear_console_logs":
-                    var clearTool = new Tools.ConsoleLogToolImplementation();
-                    var clearResult = await clearTool.ClearConsoleLogs();
-                    return JsonSerializer.Serialize(clearResult);
+                    // メソッドを実行
+                    var result = method.Invoke(serviceInstance, args);
 
-                // 他のツールも同様に実装
-                default:
-                    throw new ArgumentException($"Unknown tool: {toolName}");
+                    // 非同期メソッドの場合の処理
+                    if (result is ValueTask valueTask)
+                    {
+                        await valueTask;
+                        var valueTaskType = valueTask.GetType();
+                        if (valueTaskType.IsGenericType)
+                        {
+                            var resultProperty = valueTaskType.GetProperty("Result");
+                            return resultProperty?.GetValue(valueTask);
+                        }
+                        return null;
+                    }
+                    else if (result is Task task)
+                    {
+                        await task;
+                        var taskType = task.GetType();
+                        if (taskType.IsGenericType)
+                        {
+                            var resultProperty = taskType.GetProperty("Result");
+                            return resultProperty?.GetValue(task);
+                        }
+                        return null;
+                    }
+
+                    return result;
+                }
             }
+
+            throw new ArgumentException($"Unknown tool: {toolName}");
+        }
+
+        /// <summary>引数を適切な型に変換します</summary>
+        object ConvertArgument(object value, Type targetType)
+        {
+            if (value == null) return GetDefaultValue(targetType);
+
+            // 既に正しい型の場合
+            if (targetType.IsAssignableFrom(value.GetType()))
+                return value;
+
+            // プリミティブ型の変換
+            if (targetType == typeof(string))
+                return value.ToString();
+            else if (targetType == typeof(int))
+                return int.TryParse(value.ToString(), out var intVal) ? intVal : 0;
+            else if (targetType == typeof(bool))
+                return bool.TryParse(value.ToString(), out var boolVal) ? boolVal : false;
+            else if (targetType == typeof(double))
+                return double.TryParse(value.ToString(), out var doubleVal) ? doubleVal : 0.0;
+            else if (targetType.IsArray && targetType.GetElementType() == typeof(string))
+            {
+                // 文字列配列の場合 - JSONElementから変換
+                if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+                {
+                    var list = new List<string>();
+                    foreach (var item in jsonElement.EnumerateArray())
+                    {
+                        list.Add(item.GetString());
+                    }
+                    return list.ToArray();
+                }
+                return new string[0];
+            }
+
+            // デフォルト値を返す
+            return GetDefaultValue(targetType);
+        }
+
+        /// <summary>型のデフォルト値を取得します</summary>
+        object GetDefaultValue(Type type)
+        {
+            if (type == typeof(string)) return "";
+            if (type == typeof(int)) return 0;
+            if (type == typeof(bool)) return false;
+            if (type == typeof(double)) return 0.0;
+            if (type.IsArray) return Array.CreateInstance(type.GetElementType(), 0);
+            return type.IsValueType ? Activator.CreateInstance(type) : null;
+        }
+
+        /// <summary>PascalCaseをsnake_caseに変換します</summary>
+        string ConvertToSnakeCase(string name)
+        {
+            var result = new StringBuilder();
+            for (int i = 0; i < name.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(name[i]))
+                {
+                    result.Append('_');
+                }
+                result.Append(char.ToLower(name[i]));
+            }
+            return result.ToString();
         }
 
         /// <summary>デフォルトツールをサービスコレクションに読み込みます</summary>
@@ -600,87 +779,6 @@ namespace uMCP.Editor.Core
             await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(statusJson));
         }
 
-        /// <summary>各種ツールのスキーマ生成メソッド</summary>
-        Dictionary<string, object> CreateLogMessageSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["message"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "ログメッセージ" },
-                ["logType"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "ログタイプ (Info, Warning, Error)", ["default"] = "Info" }
-            },
-            ["required"] = new[] { "message" }
-        };
-
-        Dictionary<string, object> CreateFindAssetsSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["filter"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "検索フィルター" },
-                ["searchInFolders"] = new Dictionary<string, object> { ["type"] = "array", ["items"] = new Dictionary<string, object> { ["type"] = "string" }, ["description"] = "検索対象フォルダ" }
-            }
-        };
-
-        Dictionary<string, object> CreateGetAssetInfoSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["assetPath"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "アセットパス" }
-            },
-            ["required"] = new[] { "assetPath" }
-        };
-
-        Dictionary<string, object> CreateReimportAssetSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["assetPath"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "再インポートするアセットパス" }
-            },
-            ["required"] = new[] { "assetPath" }
-        };
-
-        Dictionary<string, object> CreateGetConsoleLogsSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["logType"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "ログタイプフィルター" },
-                ["maxCount"] = new Dictionary<string, object> { ["type"] = "integer", ["description"] = "最大取得数", ["default"] = 100 }
-            }
-        };
-
-        Dictionary<string, object> CreateLogToConsoleSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["message"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "ログメッセージ" },
-                ["logType"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "ログタイプ", ["default"] = "Log" }
-            },
-            ["required"] = new[] { "message" }
-        };
-
-        Dictionary<string, object> CreateRunTestsSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["testFilter"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "テストフィルター" },
-                ["disableDomainReload"] = new Dictionary<string, object> { ["type"] = "boolean", ["description"] = "ドメインリロード無効化", ["default"] = true }
-            }
-        };
-
-        Dictionary<string, object> CreateGetAvailableTestsSchema() => new Dictionary<string, object>
-        {
-            ["type"] = "object",
-            ["properties"] = new Dictionary<string, object>
-            {
-                ["testMode"] = new Dictionary<string, object> { ["type"] = "string", ["description"] = "テストモード (EditMode, PlayMode, All)", ["default"] = "All" }
-            }
-        };
 
         /// <summary>設定に応じてサーバーログを出力します</summary>
         void Log(string message)

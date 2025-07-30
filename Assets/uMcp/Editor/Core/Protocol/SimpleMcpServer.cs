@@ -37,7 +37,7 @@ namespace uMCP.Editor.Core.Protocol
             this.inputStream = inputStream;
             this.outputStream = outputStream;
             this.container = container;
-            
+
             jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -315,16 +315,15 @@ namespace uMCP.Editor.Core.Protocol
                     {
                         args[i] = cancellationToken;
                     }
-                    else if (callRequest.Arguments != null && callRequest.Arguments.ContainsKey(param.Name))
+                    else if (callRequest.Arguments != null && callRequest.Arguments.TryGetValue(param.Name, out var value))
                     {
-                        var argValue = callRequest.Arguments[param.Name];
-                        if (argValue is JsonElement jsonElement)
+                        if (value is JsonElement jsonElement)
                         {
                             args[i] = JsonSerializer.Deserialize(jsonElement.GetRawText(), param.ParameterType, jsonOptions);
                         }
                         else
                         {
-                            args[i] = Convert.ChangeType(argValue, param.ParameterType);
+                            args[i] = Convert.ChangeType(value, param.ParameterType);
                         }
                     }
                     else if (param.HasDefaultValue)
@@ -359,7 +358,7 @@ namespace uMCP.Editor.Core.Protocol
                     await valueTask.AsTask();
                     result = null;
                 }
-                else if (result != null && result.GetType().IsGenericType && 
+                else if (result != null && result.GetType().IsGenericType &&
                          result.GetType().GetGenericTypeDefinition() == typeof(ValueTask<>))
                 {
                     var asTaskMethod = result.GetType().GetMethod("AsTask");

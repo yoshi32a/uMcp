@@ -7,8 +7,8 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol.Server;
+using uMCP.Editor.Core.DependencyInjection;
+using uMCP.Editor.Core.Protocol;
 using UnityEditor;
 using UnityEngine;
 
@@ -21,7 +21,7 @@ namespace uMCP.Editor.Core
         readonly UMcpSettings settings;
         CancellationTokenSource cancellationTokenSource;
         bool isRunning;
-        ServiceProvider serviceProvider;
+        SimpleServiceContainer serviceContainer;
 
         /// <summary>サーバーが実行中かどうかを示すフラグ</summary>
         public bool IsRunning => isRunning;
@@ -80,28 +80,20 @@ namespace uMCP.Editor.Core
             cancellationTokenSource?.Dispose();
             cancellationTokenSource = null;
 
-            // ServiceProviderが非同期破棄のみサポートする場合の安全な処理
-            if (serviceProvider != null)
+            // サービスコンテナを破棄
+            if (serviceContainer != null)
             {
                 try
                 {
-                    if (serviceProvider is IAsyncDisposable asyncDisposable)
-                    {
-                        // 非同期破棄を同期的に待つ（Unity Editor環境では安全）
-                        asyncDisposable.DisposeAsync().AsTask().Wait(1000);
-                    }
-                    else
-                    {
-                        serviceProvider.Dispose();
-                    }
+                    serviceContainer.Dispose();
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Error disposing service provider: {ex.Message}");
+                    LogError($"Error disposing service container: {ex.Message}");
                 }
                 finally
                 {
-                    serviceProvider = null;
+                    serviceContainer = null;
                 }
             }
 
@@ -120,26 +112,19 @@ namespace uMCP.Editor.Core
             cancellationTokenSource?.Dispose();
             cancellationTokenSource = null;
 
-            if (serviceProvider != null)
+            if (serviceContainer != null)
             {
                 try
                 {
-                    if (serviceProvider is IAsyncDisposable asyncDisposable)
-                    {
-                        await asyncDisposable.DisposeAsync();
-                    }
-                    else
-                    {
-                        serviceProvider.Dispose();
-                    }
+                    serviceContainer.Dispose();
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Error disposing service provider: {ex.Message}");
+                    LogError($"Error disposing service container: {ex.Message}");
                 }
                 finally
                 {
-                    serviceProvider = null;
+                    serviceContainer = null;
                 }
             }
 
@@ -154,34 +139,44 @@ namespace uMCP.Editor.Core
             Pipe clientToServerPipe = new();
             Pipe serverToClientPipe = new();
 
-            var builder = new ServiceCollection()
-                .AddMcpServer()
-                .WithStreamServerTransport(clientToServerPipe.Reader.AsStream(), serverToClientPipe.Writer.AsStream());
+            var builder = new ServiceCollectionBuilder();
 
             if (settings.enableDefaultTools)
             {
-                // 従来のツールロード方式
-                builder.WithToolsFromAssembly();
-
-                // TODO: 新しい属性ベースのツール登録は後で実装
-                // builder.Services.RegisterAttributeTools();
-
+                // デフォルトツールをロード
+                LoadDefaultTools(builder);
                 Log("Default MCP tools loaded");
             }
 
-            LoadCustomTools(builder.Services);
+            LoadCustomTools(builder);
 
-            // await using を使わずに手動でDispose
-            serviceProvider = builder.Services.BuildServiceProvider();
+            serviceContainer = builder.Build();
+
+            // MCPサーバーを作成して登録
+            var mcpServer = new SimpleMcpServer(
+                clientToServerPipe.Reader.AsStream(),
+                serverToClientPipe.Writer.AsStream(),
+                serviceContainer
+            );
+            serviceContainer.AddSingleton<IMcpServer>(mcpServer);
 
             HandleHttpRequestAsync(clientToServerPipe, serverToClientPipe, token).Forget();
 
-            var mcpServer = serviceProvider.GetRequiredService<IMcpServer>();
             await mcpServer.RunAsync(token);
         }
 
+        /// <summary>デフォルトツールをサービスコレクションに読み込みます</summary>
+        void LoadDefaultTools(ServiceCollectionBuilder builder)
+        {
+            // ビルトインツールの実装を登録
+            builder.AddSingleton(new Tools.UnityInfoToolImplementation());
+            builder.AddSingleton(new Tools.AssetManagementToolImplementation());
+            builder.AddSingleton(new Tools.ConsoleLogToolImplementation());
+            builder.AddSingleton(new Tools.TestRunnerToolImplementation());
+        }
+
         /// <summary>カスタムツールをサービスコレクションに読み込みます</summary>
-        void LoadCustomTools(IServiceCollection services)
+        void LoadCustomTools(ServiceCollectionBuilder builder)
         {
             var toolGuids = AssetDatabase.FindAssets("t:UMcpToolBuilder");
             foreach (var guid in toolGuids)
@@ -193,7 +188,7 @@ namespace uMCP.Editor.Core
                 {
                     try
                     {
-                        tool.Build(services);
+                        tool.Build(builder);
                         Log($"Custom tool loaded: {tool.ToolName}");
                     }
                     catch (Exception ex)

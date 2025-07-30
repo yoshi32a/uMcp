@@ -1,5 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using uMCP.Editor.Core;
+using uMCP.Editor.Core.DependencyInjection;
 using UnityEngine;
 
 namespace uMCP.Editor.Tools
@@ -14,10 +14,10 @@ namespace uMCP.Editor.Tools
             description = "Get Unity editor and project information";
         }
 
-        public override void Build(IServiceCollection services)
+        public override void Build(ServiceCollectionBuilder builder)
         {
             // 現在のMCPライブラリではサービス登録のみ行う
-            services.AddSingleton<UnityInfoToolImplementation>();
+            builder.AddSingleton(new UnityInfoToolImplementation());
         }
     }
 }

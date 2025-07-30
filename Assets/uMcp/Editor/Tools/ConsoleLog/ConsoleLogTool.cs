@@ -1,5 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using uMCP.Editor.Core;
+using uMCP.Editor.Core.DependencyInjection;
 using UnityEngine;
 
 namespace uMCP.Editor.Tools
@@ -14,9 +14,9 @@ namespace uMCP.Editor.Tools
             description = "Manage Unity console logs, get current logs, and clear console";
         }
 
-        public override void Build(IServiceCollection services)
+        public override void Build(ServiceCollectionBuilder builder)
         {
-            services.AddSingleton<ConsoleLogToolImplementation>();
+            builder.AddSingleton(new ConsoleLogToolImplementation());
         }
     }
 }

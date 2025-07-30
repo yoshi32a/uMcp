@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using ModelContextProtocol.Server;
+using uMCP.Editor.Core.Attributes;
 using UnityEditor;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;

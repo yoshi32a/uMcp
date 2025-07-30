@@ -15,61 +15,55 @@
 **配布方式:** Unity Package (.unitypackage / Git URL)  
 **ライセンス:** MIT License
 
-## 主要アーキテクチャコンポーネント
+## アーキテクチャ概要
 
-### MCPサーバーコア
-- **UMcpServer.cs**: HTTPサーバー (localhost:49001/umcp/) でJSON-RPC 2.0プロトコルを使用
-- **UMcpSettings.cs**: ProjectSettings内のScriptableSingletonパターンによる設定管理
-- **UMcpServerManager.cs**: Unity Editor統合、自動初期化、アセンブリリロード処理
+### コアシステム
+- **UMcpServer**: HTTP (localhost:49001/umcp) + JSON-RPC 2.0 プロトコル
+- **UMcpSettings**: ProjectSettingsでの設定管理（ScriptableSingleton）
+- **UMcpServerManager**: Unity Editor統合、自動起動、アセンブリリロード対応
 
-### ビルトインツールシステム（4カテゴリ）
-- **UnityInfoTool**: Unity情報とシーン構造の分析
-- **AssetManagementTool**: アセット操作（リフレッシュ、検索、情報取得、再インポート、保存）
-- **ConsoleLogTool**: コンソールログ管理（取得、クリア、統計、出力）
-- **TestRunnerTool**: テスト実行（EditMode/PlayModeテスト、結果取得）
+### ツールシステム（4カテゴリ17ツール）
+1. **UnityInfo**: Unity情報・シーン分析
+2. **AssetManagement**: アセット操作（検索・更新・保存）
+3. **ConsoleLog**: コンソールログ管理・統計
+4. **TestRunner**: EditMode/PlayModeテスト実行（ドメインリロード最適化）
 
-### カスタムツールフレームワーク
-- **UMcpToolBuilder.cs**: 拡張可能なツール作成基底クラス
-- **属性ベース登録**: `[McpServerToolType]`、`[McpServerTool]`による自動認識
-- **ScriptableObject統合**: Unity標準のアセット管理システムとの統合
+### 拡張フレームワーク
+- **UMcpToolBuilder**: ScriptableObjectベースのカスタムツール作成
+- **属性ベース自動登録**: `[McpServerToolType]` + `[McpServerTool]`
+- **依存性注入**: SimpleServiceContainerによる軽量DI
 
-### Unity統合機能
-- **uMCP.Editor.asmdef**: UniTask、System.Text.Json依存のEditorアセンブリ
-- **メインスレッド同期**: すべてのUnity API呼び出しで`UniTask.SwitchToMainThread()`を使用
-- **メニュー統合**: `Tools > uMCP`でのサーバー管理とツールアセット作成
+## 技術実装
 
-## 開発パターン
+### 重要なパターン
 
-### MCP設定管理
-- 設定は`ProjectSettings/uMcpSettings.asset`に保存
-- デフォルトサーバー: `localhost:49001/umcp/`
-- 設定項目: IPアドレス、ポート、パス、CORS、デバッグモード、自動起動
-- Unity Project Settings UIから直接アクセス可能
-- 設定変更時の自動サーバー再起動
+#### 非同期処理とスレッド管理
+```csharp
+// 全Unity API呼び出し前に必須
+await UniTask.SwitchToMainThread();
+// CancellationTokenによるタイムアウト制御
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+```
 
-### ツール開発パターン
-- **ScriptableObjectベース**: `UMcpToolBuilder`を継承したアセット作成
-- **属性ベース実装**: `[McpServerToolType]`でクラス、`[McpServerTool]`でメソッドを定義
-- **自動登録**: プロジェクト内のツールアセットを自動検出・読み込み
-- **依存性注入**: `IServiceCollection`による柔軟なサービス登録
+#### ツール実装パターン
+```csharp
+[McpServerToolType, Description("ツールの説明")]
+internal sealed class MyToolImplementation
+{
+    [McpServerTool, Description("メソッドの説明")]
+    public async ValueTask<object> MyMethod(
+        [Description("パラメータ説明")] string param = "デフォルト値")
+    {
+        await UniTask.SwitchToMainThread();
+        return new MyResponse { Success = true };
+    }
+}
+```
 
-### 非同期処理パターン
-- **UniTask統合**: Unity最適化された非同期処理
-- **メインスレッド同期**: 全Unity API呼び出しで`await UniTask.SwitchToMainThread()`
-- **適切なキャンセル処理**: CancellationTokenを使用したリソース管理
-- **タイムアウト対応**: 設定可能なタイムアウト値による安全な処理
-
-## 主要な依存関係
-
-### 必須Unityパッケージ
-- **UniTask (2.3.3+)**: 非同期処理とメインスレッド同期
+### 主要依存関係
+- **UniTask (2.3.3+)**: 非同期処理・メインスレッド同期
+- **System.Text.Json (9.0.7+)**: 独自MCPプロトコル実装
 - **Unity Test Framework**: テスト実行機能
-- **Unity Editor標準API**: アセット管理、コンソール、シーン操作
-
-### 組み込みNuGetパッケージ
-- **System.Text.Json (9.0.7+)**: JSON シリアライゼーション（独自MCPプロトコル実装）
-- **Microsoft.Extensions.DependencyInjection**: 依存性注入システム
-- **System.IO.Pipelines**: 高性能I/O処理
 
 ## MCPサーバー機能
 

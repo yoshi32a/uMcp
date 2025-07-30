@@ -227,11 +227,8 @@ namespace uMCP.Editor.Core
                         break;
 
                     default:
-                        response.StatusCode = 405;
-                        response.ContentType = "application/json";
                         var errorResponse = new JsonRpcError { Code = -32601, Message = "Method not allowed" };
-                        var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
-                        await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
+                        await SendJsonResponse(response, errorResponse, 405, token);
                         break;
                 }
             }
@@ -240,11 +237,8 @@ namespace uMCP.Editor.Core
                 LogError($"Request processing error: {ex.Message}");
                 try
                 {
-                    response.StatusCode = 500;
-                    response.ContentType = "application/json";
                     var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.InternalError, Message = $"Internal server error: {ex.Message}" };
-                    var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
-                    await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
+                    await SendJsonResponse(response, errorResponse, 500, token);
                 }
                 catch
                 {
@@ -275,11 +269,8 @@ namespace uMCP.Editor.Core
 
             if (string.IsNullOrWhiteSpace(inputBody))
             {
-                response.StatusCode = 400;
-                response.ContentType = "application/json";
                 var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.InvalidRequest, Message = "Empty request body" };
-                var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
-                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
+                await SendJsonResponse(response, errorResponse, 400, token);
                 return;
             }
 
@@ -290,11 +281,8 @@ namespace uMCP.Editor.Core
             }
             catch (Exception ex)
             {
-                response.StatusCode = 400;
-                response.ContentType = "application/json";
                 var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.ParseError, Message = $"Invalid JSON: {ex.Message}" };
-                var errorJson = JsonSerializer.Serialize(errorResponse, jsonOptions);
-                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
+                await SendJsonResponse(response, errorResponse, 400, token);
                 return;
             }
 
@@ -315,26 +303,18 @@ namespace uMCP.Editor.Core
             // リクエストを処理
             var mcpResponse = await ProcessMcpRequest(jsonRpcRequest, mcpSession, token);
 
-            // レスポンスをシリアライズ
-            var responseJson = JsonSerializer.Serialize(mcpResponse, jsonOptions);
-
-            if (settings.debugMode)
-            {
-                Log($"Sending response: {responseJson}");
-            }
-
             // レスポンスヘッダーを設定
-            response.StatusCode = 200;
-            response.ContentType = "application/json; charset=utf-8";
             response.Headers.Add("Mcp-Session-Id", sessionId);
-
-            // Streamable HTTP用の追加ヘッダー
             response.Headers.Add("Cache-Control", "no-cache");
             response.Headers.Add("Connection", "keep-alive");
 
-            var responseBytes = Encoding.UTF8.GetBytes(responseJson);
-            response.ContentLength64 = responseBytes.Length;
-            await response.OutputStream.WriteAsync(responseBytes, token);
+            if (settings.debugMode)
+            {
+                var responseJson = JsonSerializer.Serialize(mcpResponse, jsonOptions);
+                Log($"Sending response: {responseJson}");
+            }
+
+            await SendJsonResponse(response, mcpResponse, 200, token);
         }
 
         /// <summary>MCPリクエストを直接処理します</summary>
@@ -798,13 +778,18 @@ namespace uMCP.Editor.Core
                 }
             };
 
-            var statusJson = JsonSerializer.Serialize(statusResponse, jsonOptions);
-
-            response.StatusCode = 200;
-            response.ContentType = "application/json";
-            await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(statusJson));
+            await SendJsonResponse(response, statusResponse);
         }
 
+
+        /// <summary>JSONレスポンスを送信します</summary>
+        async UniTask SendJsonResponse(HttpListenerResponse response, object data, int statusCode = 200, CancellationToken token = default)
+        {
+            response.StatusCode = statusCode;
+            response.ContentType = "application/json; charset=utf-8";
+            var json = JsonSerializer.Serialize(data, jsonOptions);
+            await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(json), token);
+        }
 
         /// <summary>設定に応じてサーバーログを出力します</summary>
         void Log(string message)

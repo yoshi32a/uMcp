@@ -36,7 +36,7 @@ namespace uMCP.Editor
         public bool enableCors = true;
 
         [Tooltip("Log detailed request/response data for debugging.")]
-        public bool debugMode = false;
+        public bool debugMode;
 
         public string ServerUrl => $"http://{ipAddress}:{port}{serverPath}";
 

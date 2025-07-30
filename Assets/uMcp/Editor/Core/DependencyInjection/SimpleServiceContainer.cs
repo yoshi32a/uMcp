@@ -6,9 +6,9 @@ namespace uMCP.Editor.Core.DependencyInjection
     /// <summary>簡易的なサービスコンテナ</summary>
     public class SimpleServiceContainer : IDisposable
     {
-        private readonly Dictionary<Type, object> services = new Dictionary<Type, object>();
-        private readonly Dictionary<Type, Func<object>> factories = new Dictionary<Type, Func<object>>();
-        private readonly List<IDisposable> disposables = new List<IDisposable>();
+        readonly Dictionary<Type, object> services = new();
+        readonly Dictionary<Type, Func<object>> factories = new();
+        readonly List<IDisposable> disposables = new();
 
         /// <summary>登録されているサービスを取得</summary>
         public IReadOnlyDictionary<Type, object> Services => services;
@@ -33,7 +33,7 @@ namespace uMCP.Editor.Core.DependencyInjection
         public T GetService<T>() where T : class
         {
             var type = typeof(T);
-            
+
             if (services.TryGetValue(type, out var service))
             {
                 return (T)service;
@@ -47,6 +47,7 @@ namespace uMCP.Editor.Core.DependencyInjection
                 {
                     disposables.Add(disposable);
                 }
+
                 return (T)instance;
             }
 
@@ -61,6 +62,7 @@ namespace uMCP.Editor.Core.DependencyInjection
             {
                 throw new InvalidOperationException($"Service of type {typeof(T)} not found");
             }
+
             return service;
         }
 
@@ -78,35 +80,10 @@ namespace uMCP.Editor.Core.DependencyInjection
                     UnityEngine.Debug.LogError($"[uMCP] Error disposing service: {ex.Message}");
                 }
             }
+
             disposables.Clear();
             services.Clear();
             factories.Clear();
-        }
-    }
-
-    /// <summary>サービスコレクションビルダー</summary>
-    public class ServiceCollectionBuilder
-    {
-        private readonly SimpleServiceContainer container = new SimpleServiceContainer();
-
-        /// <summary>シングルトンサービスを追加</summary>
-        public ServiceCollectionBuilder AddSingleton<T>(T instance) where T : class
-        {
-            container.AddSingleton(instance);
-            return this;
-        }
-
-        /// <summary>シングルトンサービスをファクトリーで追加</summary>
-        public ServiceCollectionBuilder AddSingleton<T>(Func<T> factory) where T : class
-        {
-            container.AddSingleton(factory);
-            return this;
-        }
-
-        /// <summary>サービスコンテナを構築</summary>
-        public SimpleServiceContainer Build()
-        {
-            return container;
         }
     }
 }

@@ -8,8 +8,7 @@ namespace uMCP.Editor.Tools
         public bool Active { get; set; }
         public string Tag { get; set; }
         public string Layer { get; set; }
-        
-        [JsonPropertyName("component_count")]
-        public int ComponentCount { get; set; }
+
+        [JsonPropertyName("component_count")] public int ComponentCount { get; set; }
     }
 }

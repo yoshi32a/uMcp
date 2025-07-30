@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -18,13 +17,13 @@ namespace uMCP.Editor.Core.Protocol
     /// <summary>シンプルなMCPサーバー実装</summary>
     public class SimpleMcpServer : IMcpServer
     {
-        private readonly Stream inputStream;
-        private readonly Stream outputStream;
-        private readonly SimpleServiceContainer container;
-        private readonly Dictionary<string, ToolMethod> tools = new Dictionary<string, ToolMethod>();
-        private readonly JsonSerializerOptions jsonOptions;
+        readonly Stream inputStream;
+        readonly Stream outputStream;
+        readonly SimpleServiceContainer container;
+        readonly Dictionary<string, ToolMethod> tools = new();
+        readonly JsonSerializerOptions jsonOptions;
 
-        private class ToolMethod
+        class ToolMethod
         {
             public object Instance { get; set; }
             public MethodInfo Method { get; set; }
@@ -47,7 +46,7 @@ namespace uMCP.Editor.Core.Protocol
             DiscoverTools();
         }
 
-        private void DiscoverTools()
+        void DiscoverTools()
         {
             // すべてのサービスからツールを探す
             var serviceTypes = container.Services;
@@ -86,7 +85,7 @@ namespace uMCP.Editor.Core.Protocol
             }
         }
 
-        private string ConvertToSnakeCase(string name)
+        string ConvertToSnakeCase(string name)
         {
             // PascalCase を snake_case に変換
             var result = new StringBuilder();
@@ -96,12 +95,14 @@ namespace uMCP.Editor.Core.Protocol
                 {
                     result.Append('_');
                 }
+
                 result.Append(char.ToLower(name[i]));
             }
+
             return result.ToString();
         }
 
-        private Dictionary<string, object> GenerateInputSchema(MethodInfo method)
+        Dictionary<string, object> GenerateInputSchema(MethodInfo method)
         {
             var parameters = method.GetParameters();
             var properties = new Dictionary<string, object>();
@@ -145,7 +146,7 @@ namespace uMCP.Editor.Core.Protocol
             return schema;
         }
 
-        private string GetJsonType(Type type)
+        string GetJsonType(Type type)
         {
             if (type == typeof(string)) return "string";
             if (type == typeof(int) || type == typeof(long)) return "integer";
@@ -196,11 +197,11 @@ namespace uMCP.Editor.Core.Protocol
             }
         }
 
-        private async Task<JsonRpcResponse> HandleRequest(JsonRpcRequest request, CancellationToken cancellationToken)
+        async Task<JsonRpcResponse> HandleRequest(JsonRpcRequest request, CancellationToken cancellationToken)
         {
             try
             {
-                object result = null;
+                object result;
 
                 switch (request.Method)
                 {
@@ -252,11 +253,11 @@ namespace uMCP.Editor.Core.Protocol
             }
         }
 
-        private InitializeResult HandleInitialize(JsonRpcRequest request)
+        InitializeResult HandleInitialize(JsonRpcRequest request)
         {
             return new InitializeResult
             {
-                ProtocolVersion = "0.1.0",
+                ProtocolVersion = "2024-11-05",
                 Capabilities = new ServerCapabilities
                 {
                     Tools = new { }
@@ -269,7 +270,7 @@ namespace uMCP.Editor.Core.Protocol
             };
         }
 
-        private ListToolsResult HandleListTools()
+        ListToolsResult HandleListTools()
         {
             var toolInfos = tools.Select(kvp => new ToolInfo
             {
@@ -281,7 +282,7 @@ namespace uMCP.Editor.Core.Protocol
             return new ListToolsResult { Tools = toolInfos };
         }
 
-        private async Task<CallToolResult> HandleCallTool(JsonRpcRequest request, CancellationToken cancellationToken)
+        async Task<CallToolResult> HandleCallTool(JsonRpcRequest request, CancellationToken cancellationToken)
         {
             var paramsElement = JsonSerializer.SerializeToElement(request.Params, jsonOptions);
             var callRequest = JsonSerializer.Deserialize<CallToolRequest>(paramsElement.GetRawText(), jsonOptions);
@@ -293,7 +294,7 @@ namespace uMCP.Editor.Core.Protocol
                     IsError = true,
                     Content = new List<ToolResultContent>
                     {
-                        new ToolResultContent
+                        new()
                         {
                             Type = "text",
                             Text = $"Tool '{callRequest.Name}' not found"
@@ -308,7 +309,7 @@ namespace uMCP.Editor.Core.Protocol
                 var parameters = toolMethod.Method.GetParameters();
                 var args = new object[parameters.Length];
 
-                for (int i = 0; i < parameters.Length; i++)
+                for (var i = 0; i < parameters.Length; i++)
                 {
                     var param = parameters[i];
                     if (param.ParameterType == typeof(CancellationToken))
@@ -375,7 +376,7 @@ namespace uMCP.Editor.Core.Protocol
                     IsError = false,
                     Content = new List<ToolResultContent>
                     {
-                        new ToolResultContent
+                        new()
                         {
                             Type = "text",
                             Text = resultJson
@@ -390,7 +391,7 @@ namespace uMCP.Editor.Core.Protocol
                     IsError = true,
                     Content = new List<ToolResultContent>
                     {
-                        new ToolResultContent
+                        new()
                         {
                             Type = "text",
                             Text = $"Error executing tool: {ex.Message}"

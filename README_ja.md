@@ -15,7 +15,6 @@ Unity EditorとAIアシスタントがリアルタイムで連携できる、強
 #### Unity情報ツール
 - `get_unity_info` - Unity エディターとプロジェクトの詳細情報取得
 - `get_scene_info` - 現在のシーン構造分析
-- `log_message` - Unity コンソールへのメッセージ出力
 
 #### アセット管理ツール
 - `refresh_assets` - Unity アセットデータベースのリフレッシュ

@@ -8,10 +8,11 @@ namespace uMCP.Editor.Core
     public static class UMcpServerManager
     {
         static UMcpServer server;
-        static bool initialized = false;
+        static bool initialized;
 
         /// <summary>現在のMCPサーバーインスタンス</summary>
         public static UMcpServer Server => server;
+
         /// <summary>サーバーが実行中かどうかを示すフラグ</summary>
         public static bool IsRunning => server?.IsRunning ?? false;
 
@@ -46,7 +47,7 @@ namespace uMCP.Editor.Core
         }
 
         /// <summary>MCPサーバーを開始します</summary>
-        [MenuItem("Tools/uMCP/Start Server")]
+        [MenuItem("uMCP/Start Server")]
         public static void StartServer()
         {
             if (server == null)
@@ -58,14 +59,14 @@ namespace uMCP.Editor.Core
         }
 
         /// <summary>MCPサーバーを停止します</summary>
-        [MenuItem("Tools/uMCP/Stop Server")]
+        [MenuItem("uMCP/Stop Server")]
         public static void StopServer()
         {
             server?.StopAsync().Forget();
         }
 
         /// <summary>MCPサーバーを再起動します</summary>
-        [MenuItem("Tools/uMCP/Restart Server")]
+        [MenuItem("uMCP/Restart Server")]
         public static void RestartServer()
         {
             RestartServerAsync().Forget();
@@ -78,11 +79,12 @@ namespace uMCP.Editor.Core
             {
                 await server.StopAsync();
             }
+
             StartServer();
         }
 
         /// <summary>uMCP設定ウィンドウを開きます</summary>
-        [MenuItem("Tools/uMCP/Open Settings")]
+        [MenuItem("uMCP/Open Settings")]
         public static void OpenSettings()
         {
             var settings = UMcpSettings.instance;
@@ -91,17 +93,17 @@ namespace uMCP.Editor.Core
         }
 
         /// <summary>サーバー情報を表示します</summary>
-        [MenuItem("Tools/uMCP/Show Server Info")]
+        [MenuItem("uMCP/Show Server Info")]
         public static void ShowServerInfo()
         {
             var settings = UMcpSettings.instance;
             var status = IsRunning ? "Running" : "Stopped";
             var message = $"uMCP Server Status: {status}\n" +
-                         $"URL: {settings.ServerUrl}\n" +
-                         $"Version: {UMcpSettings.Version}\n" +
-                         $"Auto Start: {settings.autoStart}\n" +
-                         $"Default Tools: {settings.enableDefaultTools}\n" +
-                         $"Debug Mode: {settings.debugMode}";
+                          $"URL: {settings.ServerUrl}\n" +
+                          $"Version: {UMcpSettings.Version}\n" +
+                          $"Auto Start: {settings.autoStart}\n" +
+                          $"Default Tools: {settings.enableDefaultTools}\n" +
+                          $"Debug Mode: {settings.debugMode}";
 
             EditorUtility.DisplayDialog("uMCP Server Info", message, "OK");
         }
@@ -122,6 +124,7 @@ namespace uMCP.Editor.Core
                 server.Dispose();
                 server = null;
             }
+
             initialized = false;
         }
 

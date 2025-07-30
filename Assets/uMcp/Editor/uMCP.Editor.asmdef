@@ -1,19 +1,19 @@
 {
-    "name": "uMCP.Editor",
-    "rootNamespace": "uMCP.Editor",
-    "references": [
-        "UniTask",
-        "UniTask.Editor"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
-    "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
-    "autoReferenced": false,
-    "defineConstraints": [],
-    "versionDefines": [],
-    "noEngineReferences": false
+  "name": "uMCP.Editor",
+  "rootNamespace": "uMCP.Editor",
+  "references": [
+    "UniTask",
+    "UniTask.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
 }

@@ -8,8 +8,7 @@ namespace uMCP.Editor.Tools
         public bool Success { get; set; }
         public string Error { get; set; }
 
-        [JsonPropertyName("requested_mode")]
-        public string RequestedMode { get; set; }
+        [JsonPropertyName("requested_mode")] public string RequestedMode { get; set; }
 
         public List<TestModeInfo> Tests { get; set; }
         public string Note { get; set; }

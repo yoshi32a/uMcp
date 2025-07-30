@@ -1,25 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using uMCP.Editor.Core.Protocol;
 
 namespace uMCP.Editor.Core
 {
-    /// <summary>MCPセッション情報</summary>
-    public class McpSession
-    {
-        public string SessionId { get; set; }
-        public SimpleMcpServer McpServer { get; set; }
-        public MemoryStream InputStream { get; set; }
-        public MemoryStream OutputStream { get; set; }
-        public DateTime LastAccessed { get; set; } = DateTime.Now;
-    }
-
     /// <summary>MCPセッション管理クラス</summary>
     public class SessionManager
     {
-        private readonly Dictionary<string, McpSession> sessions = new Dictionary<string, McpSession>();
-        private readonly object lockObject = new object();
+        readonly Dictionary<string, McpSession> sessions = new();
+        readonly object lockObject = new();
 
         /// <summary>新しいセッションIDを生成します</summary>
         public string CreateSession()
@@ -96,6 +84,7 @@ namespace uMCP.Editor.Core
                     session.InputStream?.Dispose();
                     session.OutputStream?.Dispose();
                 }
+
                 sessions.Clear();
             }
         }

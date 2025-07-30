@@ -8,10 +8,10 @@ namespace uMCP.Editor.Attributes
     {
         /// <summary>ツールの説明</summary>
         public string Description { get; }
-        
+
         /// <summary>ツールの順序（低い値が先に表示される）</summary>
         public int Order { get; set; } = 0;
-        
+
         /// <summary>ツールが有効かどうか</summary>
         public bool Enabled { get; set; } = true;
 

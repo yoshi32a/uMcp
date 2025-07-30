@@ -94,3 +94,6 @@ Thumbs.db
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# NuGet Packages (Unity-specific)
+/[Aa]ssets/[Pp]ackages/

@@ -18,7 +18,8 @@ namespace uMCP.Editor.Tools
         /// <summary>EditModeテストを実行</summary>
         [McpServerTool, Description("EditModeテストを実行して結果を取得")]
         public async ValueTask<object> RunEditModeTests(
-            [Description("実行するテストのフィルター（空の場合は全て）")] string testFilter = "",
+            [Description("実行するテストのフィルター（空の場合は全て）")]
+            string testFilter = "",
             [Description("タイムアウト秒数")] int timeoutSeconds = 300,
             [Description("アセンブリ名でフィルター")] string assemblyNames = "",
             [Description("カテゴリ名でフィルター")] string categoryNames = "")
@@ -30,14 +31,15 @@ namespace uMCP.Editor.Tools
         /// <summary>PlayModeテストを実行</summary>
         [McpServerTool, Description("PlayModeテストを実行して結果を取得")]
         public async ValueTask<object> RunPlayModeTests(
-            [Description("実行するテストのフィルター（空の場合は全て）")] string testFilter = "",
+            [Description("実行するテストのフィルター（空の場合は全て）")]
+            string testFilter = "",
             [Description("タイムアウト秒数")] int timeoutSeconds = 600,
             [Description("アセンブリ名でフィルター")] string assemblyNames = "",
             [Description("カテゴリ名でフィルター")] string categoryNames = "",
             [Description("ドメインリロードを無効化するか")] bool disableDomainReload = true)
         {
             await UniTask.SwitchToMainThread();
-            
+
             // PlayModeテスト実行前のチェック
             if (EditorApplication.isCompiling)
             {
@@ -48,7 +50,7 @@ namespace uMCP.Editor.Tools
                     TestMode = TestMode.PlayMode.ToString()
                 };
             }
-            
+
             if (EditorApplication.isPlaying)
             {
                 return new TestRunResponse
@@ -58,8 +60,9 @@ namespace uMCP.Editor.Tools
                     TestMode = TestMode.PlayMode.ToString()
                 };
             }
-            
-            Debug.Log($"[uMCP TestRunner] PlayMode test requested - EditorApplication.isPlaying: {EditorApplication.isPlaying}, isPlayingOrWillChangePlaymode: {EditorApplication.isPlayingOrWillChangePlaymode}");
+
+            Debug.Log(
+                $"[uMCP TestRunner] PlayMode test requested - EditorApplication.isPlaying: {EditorApplication.isPlaying}, isPlayingOrWillChangePlaymode: {EditorApplication.isPlayingOrWillChangePlaymode}");
             Debug.Log($"[uMCP TestRunner] disableDomainReload parameter: {disableDomainReload}");
             return await RunTests(TestMode.PlayMode, testFilter, timeoutSeconds, assemblyNames, categoryNames, disableDomainReload);
         }
@@ -67,106 +70,163 @@ namespace uMCP.Editor.Tools
         /// <summary>利用可能なテスト一覧を取得</summary>
         [McpServerTool, Description("プロジェクト内の利用可能なテスト一覧を取得")]
         public async ValueTask<object> GetAvailableTests(
-            [Description("テストモード: EditMode, PlayMode, または All")] string mode = "All")
+            [Description("テストモード: EditMode, PlayMode, または All")]
+            string testMode = "All",
+            [Description("実際のテスト数を取得するか（時間がかかる場合があります）")]
+            bool enableCountTest = false)
         {
+            Debug.Log($"[uMCP TestRunner] GetAvailableTests START with testMode: {testMode}, enableCountTest: {enableCountTest}");
             await UniTask.SwitchToMainThread();
 
-            // TestRunnerApi.RetrieveTestListは現在の環境で無限ループするため無効化
             var testModeInfos = new List<TestModeInfo>();
 
-            if (mode is "All" or "EditMode")
+            // "Editor" -> "EditMode" の変換も処理
+            var normalizedMode = testMode switch
             {
-                testModeInfos.Add(new TestModeInfo
-                {
-                    Mode = "EditMode",
-                    Message = "EditMode framework available (test count disabled due to API issues)"
-                });
-            }
-
-            if (mode is "All" or "PlayMode")
-            {
-                testModeInfos.Add(new TestModeInfo
-                {
-                    Mode = "PlayMode", 
-                    Message = "PlayMode framework available (test count disabled due to API issues)"
-                });
-            }
-
-            return new AvailableTestsResponse
-            {
-                Success = true,
-                RequestedMode = mode,
-                Tests = testModeInfos,
-                Note = "Unity Test Framework available - RetrieveTestList causes infinite loop in current environment",
-                Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                "Editor" => "EditMode",
+                "Play" => "PlayMode",
+                _ => testMode
             };
-        }
 
-        /// <summary>指定したテストモードのテスト数を安全に取得</summary>
-        private async Task<int> GetTestCountSafe(TestRunnerApi testRunnerApi, TestMode testMode)
-        {
-            var tcs = new TaskCompletionSource<int>();
-            bool callbackInvoked = false;
-            
-            // 非常に短いタイムアウト（3秒）
-            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            timeoutCts.Token.Register(() => 
-            {
-                if (!callbackInvoked && !tcs.Task.IsCompleted)
-                {
-                    callbackInvoked = true;
-                    tcs.SetException(new TimeoutException("RetrieveTestList timeout after 3 seconds"));
-                }
-            });
-            
+            Debug.Log($"[uMCP TestRunner] Normalized mode: {normalizedMode}");
+
+            TestRunnerApi testRunnerApi = null;
             try
             {
-                testRunnerApi.RetrieveTestList(testMode, (testRoot) =>
+                if (enableCountTest)
                 {
-                    if (!callbackInvoked)
+                    testRunnerApi = ScriptableObject.CreateInstance<TestRunnerApi>();
+                }
+
+                if (normalizedMode is "All" or "EditMode")
+                {
+                    int editModeCount = 0;
+                    string editModeMessage = "EditMode framework available";
+
+                    if (enableCountTest && testRunnerApi != null)
                     {
-                        callbackInvoked = true;
                         try
                         {
-                            int count = CountTests(testRoot);
-                            if (!tcs.Task.IsCompleted)
-                            {
-                                tcs.SetResult(count);
-                            }
+                            editModeCount = await GetTestCountSafe(testRunnerApi, TestMode.EditMode);
+                            editModeMessage = $"EditMode tests found: {editModeCount}";
                         }
                         catch (Exception ex)
                         {
-                            if (!tcs.Task.IsCompleted)
-                            {
-                                tcs.SetException(ex);
-                            }
+                            editModeMessage = $"EditMode test count failed: {ex.Message}";
                         }
                     }
-                });
+                    else
+                    {
+                        editModeMessage = "EditMode framework available (count disabled for fast response)";
+                    }
 
-                return await tcs.Task;
+                    testModeInfos.Add(new TestModeInfo
+                    {
+                        Mode = "EditMode",
+                        TestCount = editModeCount,
+                        Message = editModeMessage
+                    });
+                }
+
+                if (normalizedMode is "All" or "PlayMode")
+                {
+                    int playModeCount = 0;
+                    string playModeMessage = "PlayMode framework available";
+
+                    if (enableCountTest && testRunnerApi != null)
+                    {
+                        try
+                        {
+                            playModeCount = await GetTestCountSafe(testRunnerApi, TestMode.PlayMode);
+                            playModeMessage = $"PlayMode tests found: {playModeCount}";
+                        }
+                        catch (Exception ex)
+                        {
+                            playModeMessage = $"PlayMode test count failed: {ex.Message}";
+                        }
+                    }
+                    else
+                    {
+                        playModeMessage = "PlayMode framework available (count disabled for fast response)";
+                    }
+
+                    testModeInfos.Add(new TestModeInfo
+                    {
+                        Mode = "PlayMode",
+                        TestCount = playModeCount,
+                        Message = playModeMessage
+                    });
+                }
+
+                Debug.Log($"[uMCP TestRunner] GetAvailableTests END - returning {testModeInfos.Count} modes");
+
+                return new AvailableTestsResponse
+                {
+                    Success = true,
+                    RequestedMode = testMode,
+                    Tests = testModeInfos,
+                    Note = enableCountTest ? "Test counting enabled - actual test counts retrieved" : "Test counting disabled for faster response",
+                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                };
             }
             finally
             {
-                timeoutCts?.Dispose();
+                if (testRunnerApi != null)
+                {
+                    ScriptableObject.DestroyImmediate(testRunnerApi);
+                }
+            }
+        }
+
+        /// <summary>指定したテストモードのテスト数を安全に取得</summary>
+        private async UniTask<int> GetTestCountSafe(TestRunnerApi testRunnerApi, TestMode testMode)
+        {
+            Debug.Log($"[uMCP TestRunner] GetTestCountSafe START for {testMode}");
+
+            try
+            {
+                // タイムアウト付きでGetTestCountを呼び出し
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var countTask = GetTestCount(testRunnerApi, testMode);
+
+                // タイムアウト処理
+                var delayTask = UniTask.Delay(5000, cancellationToken: cts.Token);
+                var (hasResultLeft, winArgumentIndex) = await UniTask.WhenAny(countTask, delayTask);
+
+                if (winArgumentIndex == 0) // countTaskが完了
+                {
+                    var result = await countTask;
+                    Debug.Log($"[uMCP TestRunner] GetTestCountSafe SUCCESS for {testMode} - returning {result}");
+                    return result;
+                }
+                else // タイムアウト
+                {
+                    Debug.LogWarning($"[uMCP TestRunner] GetTestCountSafe TIMEOUT for {testMode} - returning 0");
+                    return 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[uMCP TestRunner] GetTestCountSafe ERROR for {testMode}: {ex.Message}");
+                return 0;
             }
         }
 
         /// <summary>指定したテストモードのテスト数を取得</summary>
-        private async Task<int> GetTestCount(TestRunnerApi testRunnerApi, TestMode testMode)
+        async UniTask<int> GetTestCount(TestRunnerApi testRunnerApi, TestMode testMode)
         {
-            var tcs = new TaskCompletionSource<int>();
-            
+            var tcs = new UniTaskCompletionSource<int>();
+
             // タイムアウト設定（10秒）
             var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            timeoutCts.Token.Register(() => 
+            timeoutCts.Token.Register(() =>
             {
-                if (!tcs.Task.IsCompleted)
+                if (!tcs.Task.Status.IsCompleted())
                 {
-                    tcs.SetResult(0); // タイムアウト時は0を返す
+                    tcs.TrySetResult(0); // タイムアウト時は0を返す
                 }
             });
-            
+
             try
             {
                 testRunnerApi.RetrieveTestList(testMode, (testRoot) =>
@@ -174,16 +234,16 @@ namespace uMCP.Editor.Tools
                     try
                     {
                         int count = CountTests(testRoot);
-                        if (!tcs.Task.IsCompleted)
+                        if (!tcs.Task.Status.IsCompleted())
                         {
-                            tcs.SetResult(count);
+                            tcs.TrySetResult(count);
                         }
                     }
                     catch (Exception ex)
                     {
-                        if (!tcs.Task.IsCompleted)
+                        if (!tcs.Task.Status.IsCompleted())
                         {
-                            tcs.SetException(ex);
+                            tcs.TrySetException(ex);
                         }
                     }
                 });
@@ -201,10 +261,12 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>テスト数を再帰的にカウント</summary>
-        private int CountTests(ITestAdaptor test)
+        int CountTests(ITestAdaptor test)
         {
             if (test == null) return 0;
-            
+
+            Debug.Log($"testRoot {test.Name}");
+
             if (!test.HasChildren)
                 return test.IsSuite ? 0 : 1;
 
@@ -213,16 +275,18 @@ namespace uMCP.Editor.Tools
             {
                 count += CountTests(child);
             }
+
             return count;
         }
 
         /// <summary>テスト実行の共通処理</summary>
-        private async Task<object> RunTests(TestMode testMode, string testFilter, int timeoutSeconds, string assemblyNames, string categoryNames, bool disableDomainReload = false)
+        async UniTask<object> RunTests(TestMode testMode, string testFilter, int timeoutSeconds, string assemblyNames, string categoryNames,
+            bool disableDomainReload = false)
         {
             Debug.Log($"[uMCP TestRunner] Starting {testMode} test execution");
             TestRunnerApi testRunnerApi = null;
             TestResultCollector collector = null;
-            
+
             // PlayModeテスト用のドメインリロード設定保存
             bool originalEnterPlayModeOptionsEnabled = false;
             EnterPlayModeOptions originalEnterPlayModeOptions = EnterPlayModeOptions.None;
@@ -233,19 +297,19 @@ namespace uMCP.Editor.Tools
                 if (testMode == TestMode.PlayMode)
                 {
                     Debug.Log($"[uMCP TestRunner] PlayMode test preparation - checking editor state");
-                    
+
                     // ドメインリロード設定の保存と変更
                     if (disableDomainReload)
                     {
                         originalEnterPlayModeOptionsEnabled = EditorSettings.enterPlayModeOptionsEnabled;
                         originalEnterPlayModeOptions = EditorSettings.enterPlayModeOptions;
-                        
+
                         EditorSettings.enterPlayModeOptionsEnabled = true;
                         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload;
-                        
+
                         Debug.Log($"[uMCP TestRunner] Domain reload disabled for PlayMode test execution");
                     }
-                    
+
                     // コンパイルが完了するまで待機
                     if (EditorApplication.isCompiling)
                     {
@@ -256,7 +320,7 @@ namespace uMCP.Editor.Tools
                             await UniTask.Delay(1000);
                             compilationWaitTime++;
                         }
-                        
+
                         if (EditorApplication.isCompiling)
                         {
                             // 設定を元に戻す
@@ -265,7 +329,7 @@ namespace uMCP.Editor.Tools
                                 EditorSettings.enterPlayModeOptionsEnabled = originalEnterPlayModeOptionsEnabled;
                                 EditorSettings.enterPlayModeOptions = originalEnterPlayModeOptions;
                             }
-                            
+
                             return new TestRunResponse
                             {
                                 Success = false,
@@ -274,7 +338,7 @@ namespace uMCP.Editor.Tools
                             };
                         }
                     }
-                    
+
                     Debug.Log($"[uMCP TestRunner] PlayMode preparation complete");
                 }
 
@@ -309,17 +373,17 @@ namespace uMCP.Editor.Tools
                 // テスト実行
                 Debug.Log($"[uMCP TestRunner] Executing {testMode} tests with timeout {timeoutSeconds}s");
                 Debug.Log($"[uMCP TestRunner] Filter settings - TestMode: {filter.testMode}, TestNames: {(filter.testNames?.Length ?? 0)} items");
-                
+
                 var executionSettings = new ExecutionSettings(filter);
                 Debug.Log($"[uMCP TestRunner] Created ExecutionSettings for {testMode}");
-                
+
                 // PlayModeテストの場合は実行前に少し待機
                 if (testMode == TestMode.PlayMode)
                 {
                     Debug.Log($"[uMCP TestRunner] Preparing for PlayMode test execution...");
                     await UniTask.Delay(500); // 500ms待機
                 }
-                
+
                 testRunnerApi.Execute(executionSettings);
                 Debug.Log($"[uMCP TestRunner] Execute() called for {testMode}, waiting for callbacks...");
 
@@ -377,12 +441,13 @@ namespace uMCP.Editor.Tools
                         EditorSettings.enterPlayModeOptions = originalEnterPlayModeOptions;
                         Debug.Log($"[uMCP TestRunner] Domain reload settings restored");
                     }
-                    
+
                     if (testRunnerApi != null && collector != null)
                     {
                         testRunnerApi.UnregisterCallbacks(collector);
                         Debug.Log($"[uMCP TestRunner] Unregistered callbacks for {testMode}");
                     }
+
                     if (testRunnerApi != null)
                     {
                         ScriptableObject.DestroyImmediate(testRunnerApi);

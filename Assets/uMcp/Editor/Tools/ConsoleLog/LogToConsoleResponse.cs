@@ -7,8 +7,7 @@ namespace uMCP.Editor.Tools
         public bool Success { get; set; }
         public string Message { get; set; }
 
-        [JsonPropertyName("full_message")]
-        public string FullMessage { get; set; }
+        [JsonPropertyName("full_message")] public string FullMessage { get; set; }
 
         public string Timestamp { get; set; }
     }

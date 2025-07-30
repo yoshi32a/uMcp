@@ -9,7 +9,6 @@ namespace uMCP.Editor.Tools
     [McpServerToolType, Description("Unity情報を取得するツール")]
     internal sealed class UnityInfoToolImplementation
     {
-
         /// <summary>Unity エディターとプロジェクトの情報を取得</summary>
         [McpServerTool, Description("Unity エディターとプロジェクトの詳細情報を取得")]
         public async ValueTask<object> GetUnityInfo()
@@ -62,33 +61,6 @@ namespace uMCP.Editor.Tools
                     Layer = LayerMask.LayerToName(go.layer),
                     ComponentCount = go.GetComponents<UnityEngine.Component>().Length
                 })
-            };
-        }
-
-        /// <summary>Unity コンソールにメッセージをログ出力</summary>
-        [McpServerTool, Description("Unity コンソールにメッセージをログ出力")]
-        public async ValueTask<object> LogMessage([Description("ログメッセージ")] string message = "Test message", [Description("ログタイプ: log, warning, error")] string logType = "log")
-        {
-            await UniTask.SwitchToMainThread();
-
-            switch (logType.ToLower())
-            {
-                case "error":
-                    Debug.LogError($"[MCP Tool] {message}");
-                    break;
-                case "warning":
-                    Debug.LogWarning($"[MCP Tool] {message}");
-                    break;
-                default:
-                    Debug.Log($"[MCP Tool] {message}");
-                    break;
-            }
-
-            return new LogMessageResponse
-            {
-                Success = true,
-                Message = $"Logged {logType}: {message}",
-                Timestamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
         }
     }

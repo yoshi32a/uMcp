@@ -8,8 +8,7 @@ namespace uMCP.Editor.Tools
         public int Warnings { get; set; }
         public int Info { get; set; }
 
-        [JsonPropertyName("error_percentage")]
-        public double ErrorPercentage { get; set; }
+        [JsonPropertyName("error_percentage")] public double ErrorPercentage { get; set; }
 
         [JsonPropertyName("warning_percentage")]
         public double WarningPercentage { get; set; }

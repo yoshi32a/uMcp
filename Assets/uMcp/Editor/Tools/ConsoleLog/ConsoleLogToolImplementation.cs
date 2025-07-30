@@ -152,7 +152,8 @@ namespace uMCP.Editor.Tools
         [McpServerTool, Description("Unityコンソールに指定したメッセージをログ出力")]
         public async ValueTask<object> LogToConsole(
             [Description("ログメッセージ")] string message = "Test message",
-            [Description("ログタイプ: log, warning, error")] string logType = "log",
+            [Description("ログタイプ: log, warning, error")]
+            string logType = "log",
             [Description("追加のコンテキスト情報")] string context = "")
         {
             await UniTask.SwitchToMainThread();

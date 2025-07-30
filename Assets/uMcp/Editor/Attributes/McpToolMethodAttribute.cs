@@ -8,7 +8,7 @@ namespace uMCP.Editor.Attributes
     {
         /// <summary>ツールメソッドの名前</summary>
         public string Name { get; }
-        
+
         /// <summary>ツールメソッドの説明</summary>
         public string Description { get; }
 

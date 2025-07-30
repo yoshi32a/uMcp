@@ -8,11 +8,9 @@ namespace uMCP.Editor.Tools
         public string Path { get; set; }
         public string Name { get; set; }
         public string Type { get; set; }
-        
-        [JsonPropertyName("size_bytes")]
-        public long SizeBytes { get; set; }
-        
-        [JsonPropertyName("last_modified")]
-        public string LastModified { get; set; }
+
+        [JsonPropertyName("size_bytes")] public long SizeBytes { get; set; }
+
+        [JsonPropertyName("last_modified")] public string LastModified { get; set; }
     }
 }

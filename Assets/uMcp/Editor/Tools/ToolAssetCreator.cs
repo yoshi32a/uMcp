@@ -6,7 +6,7 @@ namespace uMCP.Editor.Tools
     /// <summary>ツールアセットを自動作成するクラス</summary>
     public static class ToolAssetCreator
     {
-        [MenuItem("Tools/uMCP/Create Default Tool Assets")]
+        [MenuItem("uMCP/Create Default Tool Assets")]
         public static void CreateDefaultToolAssets()
         {
             // Unity Info Tool を作成
@@ -31,7 +31,7 @@ namespace uMCP.Editor.Tools
             Debug.Log("[uMCP] All default tool assets created successfully!");
         }
 
-        [MenuItem("Tools/uMCP/Remove Default Tool Assets")]
+        [MenuItem("uMCP/Remove Default Tool Assets")]
         public static void RemoveDefaultToolAssets()
         {
             AssetDatabase.DeleteAsset("Assets/uMcp/UnityInfoTool.asset");

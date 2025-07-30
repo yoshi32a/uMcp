@@ -15,7 +15,6 @@ A powerful Model Context Protocol (MCP) server implementation for Unity Editor t
 #### Unity Information Tool
 - `get_unity_info` - Get Unity editor and project details
 - `get_scene_info` - Analyze current scene structure
-- `log_message` - Output messages to Unity console
 
 #### Asset Management Tool
 - `refresh_assets` - Refresh Unity asset database

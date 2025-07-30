@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
 
@@ -10,18 +11,19 @@ namespace uMCP.Editor.Tools
     /// <summary>テスト結果収集クラス</summary>
     internal class TestResultCollector : ICallbacks
     {
-        TaskCompletionSource<TestRunResponse> completionSource = new();
+        UniTaskCompletionSource<TestRunResponse> completionSource = new();
         TestRunResponse currentResult = new();
         DateTime startTime;
 
-        public async Task<TestRunResponse> WaitForRunFinished(CancellationToken cancellationToken)
+        public async UniTask<TestRunResponse> WaitForRunFinished(CancellationToken cancellationToken)
         {
             try
             {
-                await using (cancellationToken.Register(() => {
-                    Debug.Log("[uMCP TestResultCollector] Cancellation requested");
-                    completionSource.TrySetCanceled();
-                }))
+                using (cancellationToken.Register(() =>
+                       {
+                           Debug.Log("[uMCP TestResultCollector] Cancellation requested");
+                           completionSource.TrySetCanceled();
+                       }))
                 {
                     Debug.Log("[uMCP TestResultCollector] Waiting for test completion...");
                     var result = await completionSource.Task;
@@ -100,7 +102,7 @@ namespace uMCP.Editor.Tools
             // TestSuiteではなく実際のテストケースのみカウント
             if (result.Test.IsSuite)
                 return;
-                
+
             switch (result.TestStatus)
             {
                 case TestStatus.Passed:
@@ -123,7 +125,7 @@ namespace uMCP.Editor.Tools
             }
         }
 
-        private int CountTests(ITestAdaptor test)
+        int CountTests(ITestAdaptor test)
         {
             if (!test.HasChildren)
                 return test.IsSuite ? 0 : 1;
@@ -133,6 +135,7 @@ namespace uMCP.Editor.Tools
             {
                 count += CountTests(child);
             }
+
             return count;
         }
     }

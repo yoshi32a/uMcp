@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -164,12 +162,12 @@ namespace uMCP.Editor.Core
         {
             // SimpleMcpServerインスタンスを作成 - セッション管理付き
             var sessionManager = new SessionManager();
-            
+
             try
             {
                 while (!token.IsCancellationRequested)
                 {
-                    HttpListenerContext context = null;
+                    HttpListenerContext context;
                     try
                     {
                         context = await httpListener.GetContextAsync();
@@ -224,7 +222,12 @@ namespace uMCP.Editor.Core
                     default:
                         response.StatusCode = 405;
                         response.ContentType = "application/json";
-                        var errorJson = "{\"error\": \"Method not allowed\"}";
+                        var errorResponse = new JsonRpcError { Code = -32601, Message = "Method not allowed" };
+                        var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                        });
                         await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                         break;
                 }
@@ -236,15 +239,27 @@ namespace uMCP.Editor.Core
                 {
                     response.StatusCode = 500;
                     response.ContentType = "application/json";
-                    var errorMessage = ex.Message.Replace("\"", "\\\"");
-                    var errorJson = $"{{\"error\": \"Internal server error: {errorMessage}\"}}";
+                    var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.InternalError, Message = $"Internal server error: {ex.Message}" };
+                    var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    });
                     await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                 }
-                catch { }
+                catch
+                {
+                }
             }
             finally
             {
-                try { response.Close(); } catch { }
+                try
+                {
+                    response.Close();
+                }
+                catch
+                {
+                }
             }
         }
 
@@ -263,7 +278,13 @@ namespace uMCP.Editor.Core
             {
                 response.StatusCode = 400;
                 response.ContentType = "application/json";
-                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("{\"error\": \"Empty request body\"}"), token);
+                var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.InvalidRequest, Message = "Empty request body" };
+                var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                });
+                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                 return;
             }
 
@@ -279,8 +300,12 @@ namespace uMCP.Editor.Core
             {
                 response.StatusCode = 400;
                 response.ContentType = "application/json";
-                var errorMessage = ex.Message.Replace("\"", "\\\"");
-                var errorJson = $"{{\"error\": \"Invalid JSON: {errorMessage}\"}}";
+                var errorResponse = new JsonRpcError { Code = JsonRpcErrorCodes.ParseError, Message = $"Invalid JSON: {ex.Message}" };
+                var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                });
                 await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                 return;
             }
@@ -318,7 +343,7 @@ namespace uMCP.Editor.Core
             response.StatusCode = 200;
             response.ContentType = "application/json; charset=utf-8";
             response.Headers.Add("Mcp-Session-Id", sessionId);
-            
+
             // Streamable HTTP用の追加ヘッダー
             response.Headers.Add("Cache-Control", "no-cache");
             response.Headers.Add("Connection", "keep-alive");
@@ -426,12 +451,12 @@ namespace uMCP.Editor.Core
         List<ToolInfo> GetBuiltinToolInfo()
         {
             var tools = new List<ToolInfo>();
-            
+
             // サービスコンテナからツール情報を自動生成
             foreach (var serviceKvp in serviceContainer.Services)
             {
                 var serviceType = serviceKvp.Key;
-                
+
                 // McpServerToolType属性があるかチェック
                 if (serviceType.GetCustomAttribute<McpServerToolTypeAttribute>() == null)
                     continue;
@@ -454,7 +479,7 @@ namespace uMCP.Editor.Core
                     });
                 }
             }
-            
+
             return tools;
         }
 
@@ -546,7 +571,7 @@ namespace uMCP.Editor.Core
                     IsError = false,
                     Content = new List<ToolResultContent>
                     {
-                        new ToolResultContent
+                        new()
                         {
                             Type = "text",
                             Text = result
@@ -556,15 +581,22 @@ namespace uMCP.Editor.Core
             }
             catch (Exception ex)
             {
+                // リフレクション例外の場合は内部例外を取得
+                var actualException = ex is System.Reflection.TargetInvocationException tie && tie.InnerException != null
+                    ? tie.InnerException
+                    : ex;
+
+                LogError($"Tool execution error - Error: {actualException}");
+
                 return new CallToolResult
                 {
                     IsError = true,
                     Content = new List<ToolResultContent>
                     {
-                        new ToolResultContent
+                        new()
                         {
                             Type = "text",
-                            Text = $"Error executing tool: {ex.Message}"
+                            Text = $"Error executing tool: {actualException.Message}\nStackTrace: {actualException.StackTrace}"
                         }
                     }
                 };
@@ -641,6 +673,7 @@ namespace uMCP.Editor.Core
                             var resultProperty = valueTaskType.GetProperty("Result");
                             return resultProperty?.GetValue(valueTask);
                         }
+
                         return null;
                     }
                     else if (result is Task task)
@@ -652,6 +685,7 @@ namespace uMCP.Editor.Core
                             var resultProperty = taskType.GetProperty("Result");
                             return resultProperty?.GetValue(task);
                         }
+
                         return null;
                     }
 
@@ -690,8 +724,10 @@ namespace uMCP.Editor.Core
                     {
                         list.Add(item.GetString());
                     }
+
                     return list.ToArray();
                 }
+
                 return new string[0];
             }
 
@@ -720,8 +756,10 @@ namespace uMCP.Editor.Core
                 {
                     result.Append('_');
                 }
+
                 result.Append(char.ToLower(name[i]));
             }
+
             return result.ToString();
         }
 

@@ -27,9 +27,11 @@ namespace uMCP.Editor.Core.Protocol
         public string JsonRpc { get; set; } = "2.0";
 
         [JsonPropertyName("result")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public object Result { get; set; }
 
         [JsonPropertyName("error")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public JsonRpcError Error { get; set; }
 
         [JsonPropertyName("id")]
@@ -46,6 +48,7 @@ namespace uMCP.Editor.Core.Protocol
         public string Message { get; set; }
 
         [JsonPropertyName("data")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public object Data { get; set; }
     }
 

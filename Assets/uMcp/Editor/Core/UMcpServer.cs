@@ -1,14 +1,19 @@
 ﻿using System;
-using System.Buffers;
+using System.Collections.Generic;
 using System.IO;
-using System.IO.Pipelines;
+using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Nodes;
 using System.Threading;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol.Server;
+using uMCP.Editor.Core.Attributes;
+using uMCP.Editor.Core.DependencyInjection;
+using uMCP.Editor.Core.Protocol;
 using UnityEditor;
 using UnityEngine;
 
@@ -21,7 +26,7 @@ namespace uMCP.Editor.Core
         readonly UMcpSettings settings;
         CancellationTokenSource cancellationTokenSource;
         bool isRunning;
-        ServiceProvider serviceProvider;
+        SimpleServiceContainer serviceContainer;
 
         /// <summary>サーバーが実行中かどうかを示すフラグ</summary>
         public bool IsRunning => isRunning;
@@ -80,28 +85,20 @@ namespace uMCP.Editor.Core
             cancellationTokenSource?.Dispose();
             cancellationTokenSource = null;
 
-            // ServiceProviderが非同期破棄のみサポートする場合の安全な処理
-            if (serviceProvider != null)
+            // サービスコンテナを破棄
+            if (serviceContainer != null)
             {
                 try
                 {
-                    if (serviceProvider is IAsyncDisposable asyncDisposable)
-                    {
-                        // 非同期破棄を同期的に待つ（Unity Editor環境では安全）
-                        asyncDisposable.DisposeAsync().AsTask().Wait(1000);
-                    }
-                    else
-                    {
-                        serviceProvider.Dispose();
-                    }
+                    serviceContainer.Dispose();
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Error disposing service provider: {ex.Message}");
+                    LogError($"Error disposing service container: {ex.Message}");
                 }
                 finally
                 {
-                    serviceProvider = null;
+                    serviceContainer = null;
                 }
             }
 
@@ -111,102 +108,63 @@ namespace uMCP.Editor.Core
         }
 
         /// <summary>MCPサーバーを非同期で停止します</summary>
-        public async UniTask StopAsync()
+        public UniTask StopAsync()
         {
             if (!isRunning)
-                return;
+                return UniTask.CompletedTask;
 
             cancellationTokenSource?.Cancel();
             cancellationTokenSource?.Dispose();
             cancellationTokenSource = null;
 
-            if (serviceProvider != null)
+            if (serviceContainer != null)
             {
                 try
                 {
-                    if (serviceProvider is IAsyncDisposable asyncDisposable)
-                    {
-                        await asyncDisposable.DisposeAsync();
-                    }
-                    else
-                    {
-                        serviceProvider.Dispose();
-                    }
+                    serviceContainer.Dispose();
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Error disposing service provider: {ex.Message}");
+                    LogError($"Error disposing service container: {ex.Message}");
                 }
                 finally
                 {
-                    serviceProvider = null;
+                    serviceContainer = null;
                 }
             }
 
             isRunning = false;
 
             Log("uMCP Server stopped (async)");
+            return UniTask.CompletedTask;
         }
 
         /// <summary>MCPサーバーの実行ループを開始します</summary>
         async UniTask RunAsync(CancellationToken token)
         {
-            Pipe clientToServerPipe = new();
-            Pipe serverToClientPipe = new();
-
-            var builder = new ServiceCollection()
-                .AddMcpServer()
-                .WithStreamServerTransport(clientToServerPipe.Reader.AsStream(), serverToClientPipe.Writer.AsStream());
+            var builder = new ServiceCollectionBuilder();
 
             if (settings.enableDefaultTools)
             {
-                // 従来のツールロード方式
-                builder.WithToolsFromAssembly();
-
-                // TODO: 新しい属性ベースのツール登録は後で実装
-                // builder.Services.RegisterAttributeTools();
-
+                // デフォルトツールをロード
+                LoadDefaultTools(builder);
                 Log("Default MCP tools loaded");
             }
 
-            LoadCustomTools(builder.Services);
+            LoadCustomTools(builder);
 
-            // await using を使わずに手動でDispose
-            serviceProvider = builder.Services.BuildServiceProvider();
+            serviceContainer = builder.Build();
 
-            HandleHttpRequestAsync(clientToServerPipe, serverToClientPipe, token).Forget();
-
-            var mcpServer = serviceProvider.GetRequiredService<IMcpServer>();
-            await mcpServer.RunAsync(token);
+            // 直接HTTP処理モードでサーバー実行
+            await HandleHttpRequestDirectAsync(token);
         }
 
-        /// <summary>カスタムツールをサービスコレクションに読み込みます</summary>
-        void LoadCustomTools(IServiceCollection services)
+        /// <summary>直接HTTP処理でMCPリクエストを処理します</summary>
+        async UniTask HandleHttpRequestDirectAsync(CancellationToken token)
         {
-            var toolGuids = AssetDatabase.FindAssets("t:UMcpToolBuilder");
-            foreach (var guid in toolGuids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var tool = AssetDatabase.LoadAssetAtPath<UMcpToolBuilder>(path);
-
-                if (tool != null && tool.IsEnabled)
-                {
-                    try
-                    {
-                        tool.Build(services);
-                        Log($"Custom tool loaded: {tool.ToolName}");
-                    }
-                    catch (Exception ex)
-                    {
-                        LogError($"Failed to load tool '{tool.ToolName}': {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        /// <summary>HTTPリクエストを処理しパイプライン間でデータを中継します</summary>
-        async UniTask HandleHttpRequestAsync(Pipe clientToServerPipe, Pipe serverToClientPipe, CancellationToken token)
-        {
+            // SimpleMcpServerインスタンスを作成 - セッション管理付き
+            var sessionManager = new SessionManager();
+            
             try
             {
                 while (!token.IsCancellationRequested)
@@ -218,11 +176,10 @@ namespace uMCP.Editor.Core
                     }
                     catch (HttpListenerException) when (token.IsCancellationRequested)
                     {
-                        // サーバー停止時の正常な終了
                         return;
                     }
 
-                    ProcessHttpContextAsync(context, clientToServerPipe, serverToClientPipe, token).Forget();
+                    ProcessMcpRequestAsync(context, sessionManager, token).Forget();
                 }
             }
             catch (ObjectDisposedException)
@@ -231,12 +188,12 @@ namespace uMCP.Editor.Core
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[uMCP] HTTP listener error: {ex.Message}");
+                LogError($"HTTP listener error: {ex.Message}");
             }
         }
 
-        /// <summary>個別のHTTPコンテキストを処理します</summary>
-        async UniTask ProcessHttpContextAsync(HttpListenerContext context, Pipe clientToServerPipe, Pipe serverToClientPipe, CancellationToken token)
+        /// <summary>個別のMCPリクエストを処理します</summary>
+        async UniTask ProcessMcpRequestAsync(HttpListenerContext context, SessionManager sessionManager, CancellationToken token)
         {
             var request = context.Request;
             var response = context.Response;
@@ -247,7 +204,7 @@ namespace uMCP.Editor.Core
                 {
                     response.Headers.Add("Access-Control-Allow-Origin", "*");
                     response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-                    response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                    response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, Mcp-Session-Id");
                 }
 
                 switch (request.HttpMethod)
@@ -257,7 +214,7 @@ namespace uMCP.Editor.Core
                         break;
 
                     case "POST":
-                        await HandlePostRequest(request, response, clientToServerPipe, serverToClientPipe, token);
+                        await HandleMcpPostRequest(request, response, sessionManager, token);
                         break;
 
                     case "GET":
@@ -265,7 +222,7 @@ namespace uMCP.Editor.Core
                         break;
 
                     default:
-                        response.StatusCode = 405; // Method Not Allowed
+                        response.StatusCode = 405;
                         response.ContentType = "application/json";
                         var errorJson = "{\"error\": \"Method not allowed\"}";
                         await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
@@ -274,7 +231,7 @@ namespace uMCP.Editor.Core
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[uMCP] Request processing error: {ex.Message}");
+                LogError($"Request processing error: {ex.Message}");
                 try
                 {
                     response.StatusCode = 500;
@@ -283,27 +240,16 @@ namespace uMCP.Editor.Core
                     var errorJson = $"{{\"error\": \"Internal server error: {errorMessage}\"}}";
                     await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(errorJson), token);
                 }
-                catch
-                {
-                    // レスポンスの送信も失敗した場合は無視
-                }
+                catch { }
             }
             finally
             {
-                try
-                {
-                    response.Close();
-                }
-                catch
-                {
-                    // クローズエラーは無視
-                }
+                try { response.Close(); } catch { }
             }
         }
 
-        /// <summary>POSTリクエストを処理します</summary>
-        async UniTask HandlePostRequest(HttpListenerRequest request, HttpListenerResponse response, Pipe clientToServerPipe, Pipe serverToClientPipe,
-            CancellationToken token)
+        /// <summary>MCPのPOSTリクエストを処理します</summary>
+        async UniTask HandleMcpPostRequest(HttpListenerRequest request, HttpListenerResponse response, SessionManager sessionManager, CancellationToken token)
         {
             using var inputReader = new StreamReader(request.InputStream, Encoding.UTF8);
             var inputBody = await inputReader.ReadToEndAsync();
@@ -321,10 +267,13 @@ namespace uMCP.Editor.Core
                 return;
             }
 
-            JsonNode inputBodyJson;
+            JsonRpcRequest jsonRpcRequest;
             try
             {
-                inputBodyJson = JsonNode.Parse(inputBody);
+                jsonRpcRequest = JsonSerializer.Deserialize<JsonRpcRequest>(inputBody, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
             }
             catch (Exception ex)
             {
@@ -336,60 +285,480 @@ namespace uMCP.Editor.Core
                 return;
             }
 
-            // notifications/initialized は応答不要
-            if (inputBodyJson?["method"]?.ToString() == "notifications/initialized")
+            // セッションIDを取得または生成
+            var sessionId = request.Headers["Mcp-Session-Id"] ?? sessionManager.CreateSession();
+            var mcpSession = sessionManager.GetOrCreateSession(sessionId);
+
+            // MCPサーバーインスタンスを取得または作成
+            if (mcpSession.McpServer == null)
             {
-                response.StatusCode = 200;
-                response.ContentType = "application/json";
-                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("{\"result\": \"ok\"}"), token);
-                return;
+                var inputStream = new MemoryStream();
+                var outputStream = new MemoryStream();
+                mcpSession.McpServer = new SimpleMcpServer(inputStream, outputStream, serviceContainer);
+                mcpSession.InputStream = inputStream;
+                mcpSession.OutputStream = outputStream;
             }
 
-            // MCPサーバーにリクエストを転送
-            await clientToServerPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes(inputBody + "\n"), token);
-            await clientToServerPipe.Writer.FlushAsync(token);
+            // リクエストを処理
+            var mcpResponse = await ProcessMcpRequest(jsonRpcRequest, mcpSession, token);
 
-            // レスポンスを読み取り（タイムアウト付き）
-            ReadResult result;
-            using (var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token))
+            // レスポンスをシリアライズ
+            var responseJson = JsonSerializer.Serialize(mcpResponse, new JsonSerializerOptions
             {
-                timeoutCts.CancelAfter(TimeSpan.FromSeconds(settings.timeoutSeconds));
-                try
-                {
-                    result = await serverToClientPipe.Reader.ReadAsync(timeoutCts.Token);
-                }
-                catch (OperationCanceledException) when (!token.IsCancellationRequested)
-                {
-                    response.StatusCode = 504; // Gateway Timeout
-                    response.ContentType = "application/json";
-                    await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("{\"error\": \"Request timeout\"}"), token);
-                    return;
-                }
-            }
-
-            var buffer = result.Buffer;
-
-            if (buffer.Length == 0)
-            {
-                response.StatusCode = 504; // Gateway Timeout
-                response.ContentType = "application/json";
-                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("{\"error\": \"No response from MCP server\"}"), token);
-                serverToClientPipe.Reader.AdvanceTo(buffer.End);
-                return;
-            }
-
-            var resultBody = Encoding.UTF8.GetString(buffer.ToArray());
-            serverToClientPipe.Reader.AdvanceTo(buffer.End);
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
 
             if (settings.debugMode)
             {
-                Log($"Sending response: {resultBody}");
+                Log($"Sending response: {responseJson}");
             }
 
+            // レスポンスヘッダーを設定
             response.StatusCode = 200;
-            response.ContentType = "application/json";
-            await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(resultBody), token);
+            response.ContentType = "application/json; charset=utf-8";
+            response.Headers.Add("Mcp-Session-Id", sessionId);
+            
+            // Streamable HTTP用の追加ヘッダー
+            response.Headers.Add("Cache-Control", "no-cache");
+            response.Headers.Add("Connection", "keep-alive");
+
+            var responseBytes = Encoding.UTF8.GetBytes(responseJson);
+            response.ContentLength64 = responseBytes.Length;
+            await response.OutputStream.WriteAsync(responseBytes, token);
         }
+
+        /// <summary>MCPリクエストを直接処理します</summary>
+        async UniTask<JsonRpcResponse> ProcessMcpRequest(JsonRpcRequest request, McpSession session, CancellationToken token)
+        {
+            try
+            {
+                object result = null;
+
+                switch (request.Method)
+                {
+                    case "initialize":
+                        result = HandleInitialize(request);
+                        break;
+
+                    case "initialized":
+                        return new JsonRpcResponse { Id = request.Id, Result = "ok" };
+
+                    case "notifications/initialized":
+                        return new JsonRpcResponse { Id = request.Id, Result = "ok" };
+
+                    case "tools/list":
+                        result = HandleListTools();
+                        break;
+
+                    case "tools/call":
+                        result = await HandleCallTool(request, token);
+                        break;
+
+                    default:
+                        return new JsonRpcResponse
+                        {
+                            Id = request.Id,
+                            Error = new JsonRpcError
+                            {
+                                Code = JsonRpcErrorCodes.MethodNotFound,
+                                Message = "Method not found"
+                            }
+                        };
+                }
+
+                return new JsonRpcResponse
+                {
+                    Id = request.Id,
+                    Result = result
+                };
+            }
+            catch (Exception ex)
+            {
+                return new JsonRpcResponse
+                {
+                    Id = request.Id,
+                    Error = new JsonRpcError
+                    {
+                        Code = JsonRpcErrorCodes.InternalError,
+                        Message = ex.Message
+                    }
+                };
+            }
+        }
+
+        /// <summary>initialize メソッドを処理します</summary>
+        InitializeResult HandleInitialize(JsonRpcRequest request)
+        {
+            return new InitializeResult
+            {
+                ProtocolVersion = "2024-11-05",
+                Capabilities = new ServerCapabilities
+                {
+                    Tools = new { }
+                },
+                ServerInfo = new ServerInfo
+                {
+                    Name = "uMCP for Unity",
+                    Version = UMcpSettings.Version
+                }
+            };
+        }
+
+        /// <summary>tools/list メソッドを処理します</summary>
+        ListToolsResult HandleListTools()
+        {
+            var tools = new List<ToolInfo>();
+
+            if (settings.enableDefaultTools)
+            {
+                // ビルトインツールを追加
+                tools.AddRange(GetBuiltinToolInfo());
+            }
+
+            // カスタムツールを追加
+            tools.AddRange(GetCustomToolInfo());
+
+            return new ListToolsResult { Tools = tools };
+        }
+
+        /// <summary>ビルトインツールの情報を取得します</summary>
+        List<ToolInfo> GetBuiltinToolInfo()
+        {
+            var tools = new List<ToolInfo>();
+            
+            // サービスコンテナからツール情報を自動生成
+            foreach (var serviceKvp in serviceContainer.Services)
+            {
+                var serviceType = serviceKvp.Key;
+                
+                // McpServerToolType属性があるかチェック
+                if (serviceType.GetCustomAttribute<McpServerToolTypeAttribute>() == null)
+                    continue;
+
+                // 各メソッドを確認
+                foreach (var method in serviceType.GetMethods(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    var toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
+                    if (toolAttr == null) continue;
+
+                    var descAttr = method.GetCustomAttribute<DescriptionAttribute>();
+                    var toolName = ConvertToSnakeCase(method.Name);
+                    var inputSchema = GenerateInputSchema(method);
+
+                    tools.Add(new ToolInfo
+                    {
+                        Name = toolName,
+                        Description = descAttr?.Description ?? "",
+                        InputSchema = inputSchema
+                    });
+                }
+            }
+            
+            return tools;
+        }
+
+        /// <summary>メソッドからInputSchemaを生成します</summary>
+        Dictionary<string, object> GenerateInputSchema(MethodInfo method)
+        {
+            var parameters = method.GetParameters();
+            var properties = new Dictionary<string, object>();
+            var required = new List<string>();
+
+            foreach (var param in parameters)
+            {
+                if (param.ParameterType == typeof(CancellationToken))
+                    continue;
+
+                var paramSchema = new Dictionary<string, object>
+                {
+                    ["type"] = GetJsonSchemaType(param.ParameterType)
+                };
+
+                var descAttr = param.GetCustomAttribute<DescriptionAttribute>();
+                if (descAttr != null)
+                {
+                    paramSchema["description"] = descAttr.Description;
+                }
+
+                if (param.HasDefaultValue && param.DefaultValue != null)
+                {
+                    paramSchema["default"] = param.DefaultValue;
+                }
+
+                properties[param.Name] = paramSchema;
+
+                if (!param.HasDefaultValue)
+                {
+                    required.Add(param.Name);
+                }
+            }
+
+            var schema = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = properties
+            };
+
+            if (required.Count > 0)
+            {
+                schema["required"] = required;
+            }
+
+            return schema;
+        }
+
+        /// <summary>型からJSONスキーマタイプを取得します</summary>
+        string GetJsonSchemaType(Type type)
+        {
+            if (type == typeof(string)) return "string";
+            if (type == typeof(int) || type == typeof(long)) return "integer";
+            if (type == typeof(float) || type == typeof(double)) return "number";
+            if (type == typeof(bool)) return "boolean";
+            if (type.IsArray || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))) return "array";
+            return "object";
+        }
+
+        /// <summary>カスタムツールの情報を取得します</summary>
+        List<ToolInfo> GetCustomToolInfo()
+        {
+            var tools = new List<ToolInfo>();
+            // TODO: カスタムツールの実装
+            return tools;
+        }
+
+        /// <summary>tools/call メソッドを処理します</summary>
+        async UniTask<CallToolResult> HandleCallTool(JsonRpcRequest request, CancellationToken token)
+        {
+            try
+            {
+                var paramsElement = JsonSerializer.SerializeToElement(request.Params);
+                var callRequest = JsonSerializer.Deserialize<CallToolRequest>(paramsElement.GetRawText());
+
+                // メインスレッドに切り替え
+                await UniTask.SwitchToMainThread();
+
+                // ツールを実行
+                var result = await ExecuteTool(callRequest.Name, callRequest.Arguments, token);
+
+                return new CallToolResult
+                {
+                    IsError = false,
+                    Content = new List<ToolResultContent>
+                    {
+                        new ToolResultContent
+                        {
+                            Type = "text",
+                            Text = result
+                        }
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new CallToolResult
+                {
+                    IsError = true,
+                    Content = new List<ToolResultContent>
+                    {
+                        new ToolResultContent
+                        {
+                            Type = "text",
+                            Text = $"Error executing tool: {ex.Message}"
+                        }
+                    }
+                };
+            }
+        }
+
+        /// <summary>ツールを実行します</summary>
+        async UniTask<string> ExecuteTool(string toolName, Dictionary<string, object> arguments, CancellationToken token)
+        {
+            // サービスコンテナから適切なツールインスタンスを取得して実行
+            var toolResult = await ExecuteToolUsingReflection(toolName, arguments, token);
+            return JsonSerializer.Serialize(toolResult);
+        }
+
+        /// <summary>リフレクションを使用してツールを自動実行します</summary>
+        async UniTask<object> ExecuteToolUsingReflection(string toolName, Dictionary<string, object> arguments, CancellationToken token)
+        {
+            // サービスコンテナからすべてのツール実装を取得
+            foreach (var serviceKvp in serviceContainer.Services)
+            {
+                var serviceType = serviceKvp.Key;
+                var serviceInstance = serviceKvp.Value;
+
+                // McpServerToolType属性があるかチェック
+                if (serviceType.GetCustomAttribute<McpServerToolTypeAttribute>() == null)
+                    continue;
+
+                // 該当するメソッドを探す
+                foreach (var method in serviceType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    var toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
+                    if (toolAttr == null) continue;
+
+                    var methodToolName = ConvertToSnakeCase(method.Name);
+                    if (methodToolName != toolName)
+                        continue;
+
+                    // メソッドのパラメータを準備
+                    var parameters = method.GetParameters();
+                    var args = new object[parameters.Length];
+
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        var param = parameters[i];
+                        if (param.ParameterType == typeof(CancellationToken))
+                        {
+                            args[i] = token;
+                        }
+                        else if (arguments != null && arguments.ContainsKey(param.Name))
+                        {
+                            args[i] = ConvertArgument(arguments[param.Name], param.ParameterType);
+                        }
+                        else if (param.HasDefaultValue)
+                        {
+                            args[i] = param.DefaultValue;
+                        }
+                        else
+                        {
+                            // 必須パラメータの場合はデフォルト値を設定
+                            args[i] = GetDefaultValue(param.ParameterType);
+                        }
+                    }
+
+                    // メソッドを実行
+                    var result = method.Invoke(serviceInstance, args);
+
+                    // 非同期メソッドの場合の処理
+                    if (result is ValueTask valueTask)
+                    {
+                        await valueTask;
+                        var valueTaskType = valueTask.GetType();
+                        if (valueTaskType.IsGenericType)
+                        {
+                            var resultProperty = valueTaskType.GetProperty("Result");
+                            return resultProperty?.GetValue(valueTask);
+                        }
+                        return null;
+                    }
+                    else if (result is Task task)
+                    {
+                        await task;
+                        var taskType = task.GetType();
+                        if (taskType.IsGenericType)
+                        {
+                            var resultProperty = taskType.GetProperty("Result");
+                            return resultProperty?.GetValue(task);
+                        }
+                        return null;
+                    }
+
+                    return result;
+                }
+            }
+
+            throw new ArgumentException($"Unknown tool: {toolName}");
+        }
+
+        /// <summary>引数を適切な型に変換します</summary>
+        object ConvertArgument(object value, Type targetType)
+        {
+            if (value == null) return GetDefaultValue(targetType);
+
+            // 既に正しい型の場合
+            if (targetType.IsAssignableFrom(value.GetType()))
+                return value;
+
+            // プリミティブ型の変換
+            if (targetType == typeof(string))
+                return value.ToString();
+            else if (targetType == typeof(int))
+                return int.TryParse(value.ToString(), out var intVal) ? intVal : 0;
+            else if (targetType == typeof(bool))
+                return bool.TryParse(value.ToString(), out var boolVal) ? boolVal : false;
+            else if (targetType == typeof(double))
+                return double.TryParse(value.ToString(), out var doubleVal) ? doubleVal : 0.0;
+            else if (targetType.IsArray && targetType.GetElementType() == typeof(string))
+            {
+                // 文字列配列の場合 - JSONElementから変換
+                if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+                {
+                    var list = new List<string>();
+                    foreach (var item in jsonElement.EnumerateArray())
+                    {
+                        list.Add(item.GetString());
+                    }
+                    return list.ToArray();
+                }
+                return new string[0];
+            }
+
+            // デフォルト値を返す
+            return GetDefaultValue(targetType);
+        }
+
+        /// <summary>型のデフォルト値を取得します</summary>
+        object GetDefaultValue(Type type)
+        {
+            if (type == typeof(string)) return "";
+            if (type == typeof(int)) return 0;
+            if (type == typeof(bool)) return false;
+            if (type == typeof(double)) return 0.0;
+            if (type.IsArray) return Array.CreateInstance(type.GetElementType(), 0);
+            return type.IsValueType ? Activator.CreateInstance(type) : null;
+        }
+
+        /// <summary>PascalCaseをsnake_caseに変換します</summary>
+        string ConvertToSnakeCase(string name)
+        {
+            var result = new StringBuilder();
+            for (int i = 0; i < name.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(name[i]))
+                {
+                    result.Append('_');
+                }
+                result.Append(char.ToLower(name[i]));
+            }
+            return result.ToString();
+        }
+
+        /// <summary>デフォルトツールをサービスコレクションに読み込みます</summary>
+        void LoadDefaultTools(ServiceCollectionBuilder builder)
+        {
+            // ビルトインツールの実装を登録
+            builder.AddSingleton(new Tools.UnityInfoToolImplementation());
+            builder.AddSingleton(new Tools.AssetManagementToolImplementation());
+            builder.AddSingleton(new Tools.ConsoleLogToolImplementation());
+            builder.AddSingleton(new Tools.TestRunnerToolImplementation());
+        }
+
+        /// <summary>カスタムツールをサービスコレクションに読み込みます</summary>
+        void LoadCustomTools(ServiceCollectionBuilder builder)
+        {
+            var toolGuids = AssetDatabase.FindAssets("t:UMcpToolBuilder");
+            foreach (var guid in toolGuids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var tool = AssetDatabase.LoadAssetAtPath<UMcpToolBuilder>(path);
+
+                if (tool != null && tool.IsEnabled)
+                {
+                    try
+                    {
+                        tool.Build(builder);
+                        Log($"Custom tool loaded: {tool.ToolName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError($"Failed to load tool '{tool.ToolName}': {ex.Message}");
+                    }
+                }
+            }
+        }
+
 
         /// <summary>GETリクエストを処理します（サーバーステータス）</summary>
         async UniTask HandleGetRequest(HttpListenerResponse response)
@@ -409,6 +778,7 @@ namespace uMCP.Editor.Core
             response.ContentType = "application/json";
             await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(statusJson));
         }
+
 
         /// <summary>設定に応じてサーバーログを出力します</summary>
         void Log(string message)

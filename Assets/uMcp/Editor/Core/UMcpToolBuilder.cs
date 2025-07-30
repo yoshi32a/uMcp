@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using uMCP.Editor.Core.DependencyInjection;
 using UnityEngine;
 
 namespace uMCP.Editor.Core
@@ -26,6 +26,6 @@ namespace uMCP.Editor.Core
         public bool IsEnabled => isEnabled;
 
         /// <summary>サービスコレクションにツールを構築する抽象メソッド</summary>
-        public abstract void Build(IServiceCollection builder);
+        public abstract void Build(ServiceCollectionBuilder builder);
     }
 }

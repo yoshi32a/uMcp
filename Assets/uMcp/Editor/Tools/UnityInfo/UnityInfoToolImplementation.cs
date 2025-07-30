@@ -1,7 +1,6 @@
-﻿using System.ComponentModel;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using ModelContextProtocol.Server;
+using uMCP.Editor.Core.Attributes;
 using UnityEngine;
 
 namespace uMCP.Editor.Tools

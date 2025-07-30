@@ -1,5 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using uMCP.Editor.Core;
+using uMCP.Editor.Core.DependencyInjection;
 using UnityEngine;
 
 namespace uMCP.Editor.Tools
@@ -14,9 +14,9 @@ namespace uMCP.Editor.Tools
             description = "Run Unity tests in EditMode and PlayMode, get test results";
         }
 
-        public override void Build(IServiceCollection services)
+        public override void Build(ServiceCollectionBuilder builder)
         {
-            services.AddSingleton<TestRunnerToolImplementation>();
+            builder.AddSingleton(new TestRunnerToolImplementation());
         }
     }
 }

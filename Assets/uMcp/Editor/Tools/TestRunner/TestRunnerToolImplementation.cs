@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using ModelContextProtocol.Server;
+using uMCP.Editor.Core.Attributes;
 using UnityEditor;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
@@ -72,49 +71,84 @@ namespace uMCP.Editor.Tools
         {
             await UniTask.SwitchToMainThread();
 
+            // TestRunnerApi.RetrieveTestListは現在の環境で無限ループするため無効化
+            var testModeInfos = new List<TestModeInfo>();
+
+            if (mode is "All" or "EditMode")
+            {
+                testModeInfos.Add(new TestModeInfo
+                {
+                    Mode = "EditMode",
+                    Message = "EditMode framework available (test count disabled due to API issues)"
+                });
+            }
+
+            if (mode is "All" or "PlayMode")
+            {
+                testModeInfos.Add(new TestModeInfo
+                {
+                    Mode = "PlayMode", 
+                    Message = "PlayMode framework available (test count disabled due to API issues)"
+                });
+            }
+
+            return new AvailableTestsResponse
+            {
+                Success = true,
+                RequestedMode = mode,
+                Tests = testModeInfos,
+                Note = "Unity Test Framework available - RetrieveTestList causes infinite loop in current environment",
+                Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            };
+        }
+
+        /// <summary>指定したテストモードのテスト数を安全に取得</summary>
+        private async Task<int> GetTestCountSafe(TestRunnerApi testRunnerApi, TestMode testMode)
+        {
+            var tcs = new TaskCompletionSource<int>();
+            bool callbackInvoked = false;
+            
+            // 非常に短いタイムアウト（3秒）
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            timeoutCts.Token.Register(() => 
+            {
+                if (!callbackInvoked && !tcs.Task.IsCompleted)
+                {
+                    callbackInvoked = true;
+                    tcs.SetException(new TimeoutException("RetrieveTestList timeout after 3 seconds"));
+                }
+            });
+            
             try
             {
-                var testRunnerApi = ScriptableObject.CreateInstance<TestRunnerApi>();
-                var testModeInfos = new List<TestModeInfo>();
-
-                if (mode is "All" or "EditMode")
+                testRunnerApi.RetrieveTestList(testMode, (testRoot) =>
                 {
-                    var editModeCount = await GetTestCount(testRunnerApi, TestMode.EditMode);
-                    testModeInfos.Add(new TestModeInfo
+                    if (!callbackInvoked)
                     {
-                        Mode = "EditMode",
-                        Message = $"{editModeCount} tests available"
-                    });
-                }
+                        callbackInvoked = true;
+                        try
+                        {
+                            int count = CountTests(testRoot);
+                            if (!tcs.Task.IsCompleted)
+                            {
+                                tcs.SetResult(count);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!tcs.Task.IsCompleted)
+                            {
+                                tcs.SetException(ex);
+                            }
+                        }
+                    }
+                });
 
-                if (mode is "All" or "PlayMode")
-                {
-                    var playModeCount = await GetTestCount(testRunnerApi, TestMode.PlayMode);
-                    testModeInfos.Add(new TestModeInfo
-                    {
-                        Mode = "PlayMode",
-                        Message = $"{playModeCount} tests available"
-                    });
-                }
-
-                ScriptableObject.DestroyImmediate(testRunnerApi);
-
-                return new AvailableTestsResponse
-                {
-                    Success = true,
-                    RequestedMode = mode,
-                    Tests = testModeInfos,
-                    Note = "Unity Test Framework configured and ready",
-                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                };
+                return await tcs.Task;
             }
-            catch (Exception ex)
+            finally
             {
-                return new ErrorResponse
-                {
-                    Success = false,
-                    Error = $"Failed to get available tests: {ex.Message}"
-                };
+                timeoutCts?.Dispose();
             }
         }
 
@@ -123,13 +157,47 @@ namespace uMCP.Editor.Tools
         {
             var tcs = new TaskCompletionSource<int>();
             
-            testRunnerApi.RetrieveTestList(testMode, (testRoot) =>
+            // タイムアウト設定（10秒）
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            timeoutCts.Token.Register(() => 
             {
-                int count = CountTests(testRoot);
-                tcs.SetResult(count);
+                if (!tcs.Task.IsCompleted)
+                {
+                    tcs.SetResult(0); // タイムアウト時は0を返す
+                }
             });
+            
+            try
+            {
+                testRunnerApi.RetrieveTestList(testMode, (testRoot) =>
+                {
+                    try
+                    {
+                        int count = CountTests(testRoot);
+                        if (!tcs.Task.IsCompleted)
+                        {
+                            tcs.SetResult(count);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!tcs.Task.IsCompleted)
+                        {
+                            tcs.SetException(ex);
+                        }
+                    }
+                });
 
-            return await tcs.Task;
+                return await tcs.Task;
+            }
+            catch (Exception)
+            {
+                return 0; // エラー時は0を返す
+            }
+            finally
+            {
+                timeoutCts?.Dispose();
+            }
         }
 
         /// <summary>テスト数を再帰的にカウント</summary>

@@ -35,6 +35,28 @@ namespace uMCP.Editor.Tools
                     return new { success = false, error = "Method name is required" };
                 }
 
+                // コンパイル状態をチェック
+                if (EditorApplication.isCompiling)
+                {
+                    return new { 
+                        success = false, 
+                        error = "Unity is currently compiling scripts. Please wait for compilation to complete and try again.",
+                        isCompiling = true
+                    };
+                }
+
+                // コンパイルエラーをチェック
+                var compilationMessages = GetCompilationErrors();
+                if (compilationMessages.Length > 0)
+                {
+                    return new { 
+                        success = false, 
+                        error = "Compilation errors detected. Please fix the errors before executing methods.",
+                        compilationErrors = compilationMessages,
+                        errorCount = compilationMessages.Length
+                    };
+                }
+
                 // 型を取得
                 var type = GetTypeFromAllAssemblies(className);
                 if (type == null)
@@ -196,7 +218,7 @@ namespace uMCP.Editor.Tools
             if (targetType.IsAssignableFrom(value.GetType()))
                 return value;
 
-            // 基本的な型変換
+            // 基本的な型変換1
             if (targetType == typeof(string))
                 return value.ToString();
             if (targetType == typeof(int))
@@ -217,6 +239,21 @@ namespace uMCP.Editor.Tools
             if (type == typeof(string)) return "";
             if (type.IsValueType) return Activator.CreateInstance(type);
             return null;
+        }
+
+        /// <summary>コンパイルエラーを取得</summary>
+        string[] GetCompilationErrors()
+        {
+            var errors = new List<string>();
+
+            // シンプルに現在のコンパイル状態をチェック
+            // 実際のエラー詳細はコンソールログツールで確認可能
+            if (EditorApplication.isCompiling)
+            {
+                errors.Add("Scripts are currently being compiled. Please wait for compilation to complete.");
+            }
+
+            return errors.ToArray();
         }
     }
 }

@@ -12,14 +12,17 @@ namespace uMCP.Editor.Tools
     [McpServerToolType, Description("Unityアセット管理ツール")]
     internal sealed class AssetManagementToolImplementation
     {
-        /// <summary>アセットデータベースをリフレッシュ</summary>
+        /// <summary>アセットデータベースをリフレッシュ（シンプル同期版）</summary>
         [McpServerTool, Description("アセットデータベースをリフレッシュして変更を反映")]
         public async ValueTask<object> RefreshAssets()
         {
             await UniTask.SwitchToMainThread();
 
             var startTime = System.DateTime.Now;
+            
+            // シンプルにリフレッシュのみ
             AssetDatabase.Refresh();
+            
             var duration = (System.DateTime.Now - startTime).TotalMilliseconds;
 
             return new AssetOperationResponse

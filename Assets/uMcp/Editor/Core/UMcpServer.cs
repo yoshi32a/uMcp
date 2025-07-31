@@ -62,6 +62,12 @@ namespace uMCP.Editor.Core
             {
                 cancellationTokenSource = new CancellationTokenSource();
 
+                // 前回のPrefixesをクリア（再起動時のポート競合回避）
+                if (httpListener.Prefixes.Count > 0)
+                {
+                    httpListener.Prefixes.Clear();
+                }
+
                 var serverUrl = $"http://{settings.ipAddress}:{settings.port}{settings.serverPath}";
                 httpListener.Prefixes.Add(serverUrl);
                 httpListener.Start();

@@ -290,15 +290,8 @@ namespace uMCP.Editor.Core
             var sessionId = request.Headers["Mcp-Session-Id"] ?? sessionManager.CreateSession();
             var mcpSession = sessionManager.GetOrCreateSession(sessionId);
 
-            // MCPサーバーインスタンスを取得または作成
-            if (mcpSession.McpServer == null)
-            {
-                var inputStream = new MemoryStream();
-                var outputStream = new MemoryStream();
-                mcpSession.McpServer = new SimpleMcpServer(inputStream, outputStream, serviceContainer);
-                mcpSession.InputStream = inputStream;
-                mcpSession.OutputStream = outputStream;
-            }
+            // セッションの最終アクセス時刻を更新
+            mcpSession.LastAccessed = DateTime.Now;
 
             // リクエストを処理
             var mcpResponse = await ProcessMcpRequest(jsonRpcRequest, mcpSession, token);

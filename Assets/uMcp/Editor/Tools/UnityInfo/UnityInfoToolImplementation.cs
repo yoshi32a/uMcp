@@ -59,7 +59,7 @@ namespace uMCP.Editor.Tools
                     Active = go.activeSelf,
                     Tag = go.tag,
                     Layer = LayerMask.LayerToName(go.layer),
-                    ComponentCount = go.GetComponents<UnityEngine.Component>().Length
+                    ComponentCount = go.GetComponents<Component>().Length
                 })
             };
         }

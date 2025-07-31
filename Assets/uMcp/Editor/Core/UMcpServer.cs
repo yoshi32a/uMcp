@@ -322,7 +322,7 @@ namespace uMCP.Editor.Core
         {
             try
             {
-                object result = null;
+                object result;
 
                 switch (request.Method)
                 {
@@ -546,7 +546,7 @@ namespace uMCP.Editor.Core
             catch (Exception ex)
             {
                 // リフレクション例外の場合は内部例外を取得
-                var actualException = ex is System.Reflection.TargetInvocationException tie && tie.InnerException != null
+                var actualException = ex is TargetInvocationException tie && tie.InnerException != null
                     ? tie.InnerException
                     : ex;
 
@@ -589,7 +589,7 @@ namespace uMCP.Editor.Core
                     continue;
 
                 // 該当するメソッドを探す
-                foreach (var method in serviceType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                foreach (var method in serviceType.GetMethods(BindingFlags.Public | BindingFlags.Instance))
                 {
                     var toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
                     if (toolAttr == null) continue;
@@ -609,9 +609,9 @@ namespace uMCP.Editor.Core
                         {
                             args[i] = token;
                         }
-                        else if (arguments != null && arguments.ContainsKey(param.Name))
+                        else if (arguments != null && arguments.TryGetValue(param.Name, out var argument))
                         {
-                            args[i] = ConvertArgument(arguments[param.Name], param.ParameterType);
+                            args[i] = ConvertArgument(argument, param.ParameterType);
                         }
                         else if (param.HasDefaultValue)
                         {
@@ -706,7 +706,7 @@ namespace uMCP.Editor.Core
             if (type == typeof(int)) return 0;
             if (type == typeof(bool)) return false;
             if (type == typeof(double)) return 0.0;
-            if (type.IsArray) return Array.CreateInstance(type.GetElementType(), 0);
+            if (type.IsArray) return Array.CreateInstance(type.GetElementType()!, 0);
             return type.IsValueType ? Activator.CreateInstance(type) : null;
         }
 
@@ -768,13 +768,13 @@ namespace uMCP.Editor.Core
             var statusResponse = new JsonRpcResponse
             {
                 Id = null,
-                Result = new
+                Result = new ServerStatusResponse
                 {
-                    status = "running",
-                    server = "uMCP for Unity",
-                    version = UMcpSettings.Version,
-                    unity_version = Application.unityVersion,
-                    platform = Application.platform.ToString()
+                    Status = "running",
+                    Server = "uMCP for Unity",
+                    Version = UMcpSettings.Version,
+                    UnityVersion = Application.unityVersion,
+                    Platform = Application.platform.ToString()
                 }
             };
 

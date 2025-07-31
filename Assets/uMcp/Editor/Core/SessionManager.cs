@@ -36,57 +36,5 @@ namespace uMCP.Editor.Core
                 return newSession;
             }
         }
-
-        /// <summary>セッションを削除します</summary>
-        public void RemoveSession(string sessionId)
-        {
-            lock (lockObject)
-            {
-                if (sessions.TryGetValue(sessionId, out var session))
-                {
-                    session.InputStream?.Dispose();
-                    session.OutputStream?.Dispose();
-                    sessions.Remove(sessionId);
-                }
-            }
-        }
-
-        /// <summary>古いセッションをクリーンアップします</summary>
-        public void CleanupOldSessions(TimeSpan maxAge)
-        {
-            lock (lockObject)
-            {
-                var cutoffTime = DateTime.Now - maxAge;
-                var sessionsToRemove = new List<string>();
-
-                foreach (var kvp in sessions)
-                {
-                    if (kvp.Value.LastAccessed < cutoffTime)
-                    {
-                        sessionsToRemove.Add(kvp.Key);
-                    }
-                }
-
-                foreach (var sessionId in sessionsToRemove)
-                {
-                    RemoveSession(sessionId);
-                }
-            }
-        }
-
-        /// <summary>全セッションをクリアします</summary>
-        public void ClearAllSessions()
-        {
-            lock (lockObject)
-            {
-                foreach (var session in sessions.Values)
-                {
-                    session.InputStream?.Dispose();
-                    session.OutputStream?.Dispose();
-                }
-
-                sessions.Clear();
-            }
-        }
     }
 }

@@ -13,11 +13,11 @@ namespace uMCP.Editor.Tools
     [McpServerToolType, Description("Unityコンソールログ管理ツール")]
     internal sealed class ConsoleLogToolImplementation
     {
-        static readonly Type LogEntriesType = Type.GetType("UnityEditor.LogEntries,UnityEditor.dll");
-        static readonly Type LogEntryType = Type.GetType("UnityEditor.LogEntry,UnityEditor.dll");
-        static readonly MethodInfo GetCountMethod = LogEntriesType?.GetMethod("GetCount", BindingFlags.Public | BindingFlags.Static);
-        static readonly MethodInfo GetEntryInternalMethod = LogEntriesType?.GetMethod("GetEntryInternal", BindingFlags.Public | BindingFlags.Static);
-        static readonly MethodInfo ClearMethod = LogEntriesType?.GetMethod("Clear", BindingFlags.Public | BindingFlags.Static);
+        static readonly Type logEntriesType = Type.GetType("UnityEditor.LogEntries,UnityEditor.dll");
+        static readonly Type logEntryType = Type.GetType("UnityEditor.LogEntry,UnityEditor.dll");
+        static readonly MethodInfo getCountMethod = logEntriesType?.GetMethod("GetCount", BindingFlags.Public | BindingFlags.Static);
+        static readonly MethodInfo getEntryInternalMethod = logEntriesType?.GetMethod("GetEntryInternal", BindingFlags.Public | BindingFlags.Static);
+        static readonly MethodInfo clearMethod = logEntriesType?.GetMethod("Clear", BindingFlags.Public | BindingFlags.Static);
 
         /// <summary>現在のコンソールログを取得</summary>
         [McpServerTool, Description("現在のUnityコンソールログを取得")]
@@ -29,7 +29,7 @@ namespace uMCP.Editor.Tools
         {
             await UniTask.SwitchToMainThread();
 
-            if (LogEntriesType == null || LogEntryType == null || GetCountMethod == null || GetEntryInternalMethod == null)
+            if (logEntriesType == null || logEntryType == null || getCountMethod == null || getEntryInternalMethod == null)
             {
                 return new ErrorResponse
                 {
@@ -43,15 +43,15 @@ namespace uMCP.Editor.Tools
             maxMessageLength = Math.Max(50, Math.Min(maxMessageLength, 2000));
 
             var logs = new List<LogEntry>();
-            int totalCount = (int)GetCountMethod.Invoke(null, null);
+            int totalCount = (int)getCountMethod.Invoke(null, null);
             int startIndex = Math.Max(0, totalCount - maxLogs);
 
             for (int i = startIndex; i < totalCount; i++)
             {
                 try
                 {
-                    var logEntry = Activator.CreateInstance(LogEntryType);
-                    GetEntryInternalMethod.Invoke(null, new object[] { i, logEntry });
+                    var logEntry = Activator.CreateInstance(logEntryType);
+                    getEntryInternalMethod.Invoke(null, new[] { i, logEntry });
 
                     // LogEntryのフィールドからメッセージとモードを取得
                     var condition = logEntry.GetType().GetField("condition")?.GetValue(logEntry)?.ToString()
@@ -118,7 +118,7 @@ namespace uMCP.Editor.Tools
         {
             await UniTask.SwitchToMainThread();
 
-            if (ClearMethod == null)
+            if (clearMethod == null)
             {
                 return new ErrorResponse
                 {
@@ -129,7 +129,7 @@ namespace uMCP.Editor.Tools
 
             try
             {
-                ClearMethod.Invoke(null, null);
+                clearMethod.Invoke(null, null);
 
                 return new ClearConsoleResponse
                 {
@@ -190,7 +190,7 @@ namespace uMCP.Editor.Tools
         {
             await UniTask.SwitchToMainThread();
 
-            if (LogEntriesType == null || LogEntryType == null || GetCountMethod == null || GetEntryInternalMethod == null)
+            if (logEntriesType == null || logEntryType == null || getCountMethod == null || getEntryInternalMethod == null)
             {
                 return new ErrorResponse
                 {
@@ -201,7 +201,7 @@ namespace uMCP.Editor.Tools
 
             try
             {
-                int totalCount = (int)GetCountMethod.Invoke(null, null);
+                int totalCount = (int)getCountMethod.Invoke(null, null);
                 int errorCount = 0, warningCount = 0, infoCount = 0;
 
                 // 最新100件をサンプリングして統計を取得
@@ -212,8 +212,8 @@ namespace uMCP.Editor.Tools
                 {
                     try
                     {
-                        var logEntry = Activator.CreateInstance(LogEntryType);
-                        GetEntryInternalMethod.Invoke(null, new object[] { i, logEntry });
+                        var logEntry = Activator.CreateInstance(logEntryType);
+                        getEntryInternalMethod.Invoke(null, new[] { i, logEntry });
 
                         var mode = (int)(logEntry.GetType().GetField("mode")?.GetValue(logEntry) ?? 0);
 
@@ -224,7 +224,6 @@ namespace uMCP.Editor.Tools
                     catch
                     {
                         // ログエントリの読み取りに失敗した場合はスキップ
-                        continue;
                     }
                 }
 
@@ -238,8 +237,8 @@ namespace uMCP.Editor.Tools
                         Errors = errorCount,
                         Warnings = warningCount,
                         Info = infoCount,
-                        ErrorPercentage = totalCount > 0 ? (errorCount * 100.0 / sampleSize) : 0,
-                        WarningPercentage = totalCount > 0 ? (warningCount * 100.0 / sampleSize) : 0
+                        ErrorPercentage = totalCount > 0 ? errorCount * 100.0 / sampleSize : 0,
+                        WarningPercentage = totalCount > 0 ? warningCount * 100.0 / sampleSize : 0
                     },
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 };

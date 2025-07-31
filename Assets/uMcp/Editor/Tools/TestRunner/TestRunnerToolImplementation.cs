@@ -25,7 +25,7 @@ namespace uMCP.Editor.Tools
             [Description("カテゴリ名でフィルター")] string categoryNames = "")
         {
             await UniTask.SwitchToMainThread();
-            return await RunTests(TestMode.EditMode, testFilter, timeoutSeconds, assemblyNames, categoryNames, false);
+            return await RunTests(TestMode.EditMode, testFilter, timeoutSeconds, assemblyNames, categoryNames);
         }
 
         /// <summary>PlayModeテストを実行</summary>
@@ -101,7 +101,7 @@ namespace uMCP.Editor.Tools
                 if (normalizedMode is "All" or "EditMode")
                 {
                     int editModeCount = 0;
-                    string editModeMessage = "EditMode framework available";
+                    string editModeMessage;
 
                     if (enableCountTest && testRunnerApi != null)
                     {
@@ -131,7 +131,7 @@ namespace uMCP.Editor.Tools
                 if (normalizedMode is "All" or "PlayMode")
                 {
                     int playModeCount = 0;
-                    string playModeMessage = "PlayMode framework available";
+                    string playModeMessage;
 
                     if (enableCountTest && testRunnerApi != null)
                     {
@@ -179,7 +179,7 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>指定したテストモードのテスト数を安全に取得</summary>
-        private async UniTask<int> GetTestCountSafe(TestRunnerApi testRunnerApi, TestMode testMode)
+        async UniTask<int> GetTestCountSafe(TestRunnerApi testRunnerApi, TestMode testMode)
         {
             Debug.Log($"[uMCP TestRunner] GetTestCountSafe START for {testMode}");
 
@@ -191,7 +191,7 @@ namespace uMCP.Editor.Tools
 
                 // タイムアウト処理
                 var delayTask = UniTask.Delay(5000, cancellationToken: cts.Token);
-                var (hasResultLeft, winArgumentIndex) = await UniTask.WhenAny(countTask, delayTask);
+                var (_, winArgumentIndex) = await UniTask.WhenAny(countTask, delayTask);
 
                 if (winArgumentIndex == 0) // countTaskが完了
                 {
@@ -372,7 +372,7 @@ namespace uMCP.Editor.Tools
 
                 // テスト実行
                 Debug.Log($"[uMCP TestRunner] Executing {testMode} tests with timeout {timeoutSeconds}s");
-                Debug.Log($"[uMCP TestRunner] Filter settings - TestMode: {filter.testMode}, TestNames: {(filter.testNames?.Length ?? 0)} items");
+                Debug.Log($"[uMCP TestRunner] Filter settings - TestMode: {filter.testMode}, TestNames: {filter.testNames?.Length ?? 0} items");
 
                 var executionSettings = new ExecutionSettings(filter);
                 Debug.Log($"[uMCP TestRunner] Created ExecutionSettings for {testMode}");

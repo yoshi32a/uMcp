@@ -6,5 +6,6 @@ namespace uMCP.Editor.Core.Attributes
     [AttributeUsage(AttributeTargets.Method)]
     public class McpServerToolAttribute : Attribute
     {
+
     }
 }

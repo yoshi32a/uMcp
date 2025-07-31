@@ -81,7 +81,7 @@ namespace uMCP.Editor.Tools
             currentResult.EndTime = endTime.ToString("yyyy-MM-dd HH:mm:ss");
             currentResult.Summary.DurationSeconds = duration.TotalSeconds;
             currentResult.Summary.SuccessRate = currentResult.Summary.TotalTests > 0
-                ? (currentResult.Summary.PassedTests * 100.0 / currentResult.Summary.TotalTests)
+                ? currentResult.Summary.PassedTests * 100.0 / currentResult.Summary.TotalTests
                 : 0;
             currentResult.OverallResult = currentResult.Summary.FailedTests == 0 ? "PASSED" : "FAILED";
 

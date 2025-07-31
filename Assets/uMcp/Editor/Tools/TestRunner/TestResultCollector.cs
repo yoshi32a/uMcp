@@ -13,6 +13,12 @@ namespace uMCP.Editor.Tools
         readonly UniTaskCompletionSource<TestRunResponse> completionSource = new();
         TestRunResponse currentResult = new();
         DateTime startTime;
+        readonly int timeoutSeconds;
+
+        public TestResultCollector(int timeoutSeconds = 0)
+        {
+            this.timeoutSeconds = timeoutSeconds;
+        }
 
         public async UniTask<TestRunResponse> WaitForRunFinished(CancellationToken cancellationToken)
         {
@@ -57,6 +63,7 @@ namespace uMCP.Editor.Tools
             {
                 Success = true,
                 TestMode = testsToRun.TestMode.ToString(),
+                TimeoutSeconds = timeoutSeconds,
                 Summary = new TestSummary
                 {
                     TotalTests = totalTests,

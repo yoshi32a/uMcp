@@ -100,7 +100,7 @@ namespace uMCP.Editor.Tools
 
                     try
                     {
-                        editModeCount = await GetTestCountSafe(testRunnerApi, TestMode.EditMode);
+                        editModeCount = await GetTestCount(testRunnerApi, TestMode.EditMode);
                         editModeMessage = $"EditMode tests found: {editModeCount}";
                     }
                     catch (Exception ex)
@@ -123,7 +123,7 @@ namespace uMCP.Editor.Tools
 
                     try
                     {
-                        playModeCount = await GetTestCountSafe(testRunnerApi, TestMode.PlayMode);
+                        playModeCount = await GetTestCount(testRunnerApi, TestMode.PlayMode);
                         playModeMessage = $"PlayMode tests found: {playModeCount}";
                     }
                     catch (Exception ex)
@@ -159,53 +159,23 @@ namespace uMCP.Editor.Tools
             }
         }
 
-        /// <summary>指定したテストモードのテスト数を安全に取得</summary>
-        async UniTask<int> GetTestCountSafe(TestRunnerApi testRunnerApi, TestMode testMode)
-        {
-            Debug.Log($"[uMCP TestRunner] GetTestCountSafe START for {testMode}");
-
-            try
-            {
-                // タイムアウト付きでGetTestCountを呼び出し
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                var countTask = GetTestCount(testRunnerApi, testMode);
-
-                // タイムアウト処理
-                var delayTask = UniTask.Delay(5000, cancellationToken: cts.Token);
-                var (_, winArgumentIndex) = await UniTask.WhenAny(countTask, delayTask);
-
-                if (winArgumentIndex == 0) // countTaskが完了
-                {
-                    var result = await countTask;
-                    Debug.Log($"[uMCP TestRunner] GetTestCountSafe SUCCESS for {testMode} - returning {result}");
-                    return result;
-                }
-                else // タイムアウト
-                {
-                    Debug.LogWarning($"[uMCP TestRunner] GetTestCountSafe TIMEOUT for {testMode} - returning 0");
-                    return 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[uMCP TestRunner] GetTestCountSafe ERROR for {testMode}: {ex.Message}");
-                return 0;
-            }
-        }
 
         /// <summary>指定したテストモードのテスト数を取得</summary>
         async UniTask<int> GetTestCount(TestRunnerApi testRunnerApi, TestMode testMode)
         {
             var tcs = new UniTaskCompletionSource<int>();
 
-            // タイムアウト設定（10秒）
-            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            // タイムアウト設定（5秒）
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             timeoutCts.Token.Register(() =>
             {
-                if (!tcs.Task.Status.IsCompleted())
+                if (tcs.Task.Status.IsCompleted())
                 {
-                    tcs.TrySetResult(0); // タイムアウト時は0を返す
+                    return;
                 }
+
+                tcs.TrySetResult(0); // タイムアウト時は0を返す
+                Debug.LogWarning($"[uMCP TestRunner] GetTestCount TIMEOUT for {testMode} - returning 0");
             });
 
             try
@@ -324,7 +294,7 @@ namespace uMCP.Editor.Tools
                 }
 
                 testRunnerApi = ScriptableObject.CreateInstance<TestRunnerApi>();
-                collector = new TestResultCollector();
+                collector = new TestResultCollector(timeoutSeconds);
 
                 Debug.Log($"[uMCP TestRunner] Created TestRunnerApi and TestResultCollector for {testMode}");
                 testRunnerApi.RegisterCallbacks(collector);

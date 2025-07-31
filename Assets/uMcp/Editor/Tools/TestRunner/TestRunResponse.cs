@@ -6,6 +6,8 @@ namespace uMCP.Editor.Tools
     public class TestRunResponse
     {
         public bool Success { get; set; }
+        
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string Error { get; set; }
 
         [JsonPropertyName("test_mode")] public string TestMode { get; set; }

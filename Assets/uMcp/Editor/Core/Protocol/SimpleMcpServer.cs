@@ -40,6 +40,7 @@ namespace uMCP.Editor.Core.Protocol
             jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = false
             };
 

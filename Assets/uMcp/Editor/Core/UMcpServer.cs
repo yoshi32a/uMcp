@@ -86,9 +86,47 @@ namespace uMCP.Editor.Core
             if (!isRunning)
                 return;
 
+            // CancellationTokenを使って非同期処理を停止
             cancellationTokenSource?.Cancel();
-            cancellationTokenSource?.Dispose();
-            cancellationTokenSource = null;
+
+            // HttpListenerを停止
+            try
+            {
+                if (httpListener.IsListening)
+                {
+                    httpListener.Stop();
+                    Log("HttpListener stopped");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error stopping HttpListener: {ex.Message}");
+            }
+
+            // Prefixesをクリア
+            try
+            {
+                httpListener.Prefixes.Clear();
+                Log("HttpListener prefixes cleared");
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error clearing prefixes: {ex.Message}");
+            }
+
+            // CancellationTokenSourceを破棄
+            try
+            {
+                cancellationTokenSource?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error disposing cancellation token: {ex.Message}");
+            }
+            finally
+            {
+                cancellationTokenSource = null;
+            }
 
             // サービスコンテナを破棄
             if (serviceContainer != null)
@@ -747,6 +785,7 @@ namespace uMCP.Editor.Core
             builder.AddSingleton(new Tools.AssetManagementToolImplementation());
             builder.AddSingleton(new Tools.ConsoleLogToolImplementation());
             builder.AddSingleton(new Tools.TestRunnerToolImplementation());
+            builder.AddSingleton(new Tools.EditorExtensionToolImplementation());
         }
 
         /// <summary>カスタムツールをサービスコレクションに読み込みます</summary>

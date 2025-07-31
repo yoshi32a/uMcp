@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace uMCP.Editor.Tools
@@ -94,6 +95,10 @@ namespace uMCP.Editor.Tools
         
         [JsonPropertyName("description")]
         public string Description { get; set; }
+        
+        [JsonPropertyName("properties")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, object> Properties { get; set; }
     }
 
     public class HierarchyInfo

@@ -17,10 +17,10 @@ namespace uMCP.Editor.Core
         [SerializeField] protected bool isEnabled = true;
 
         /// <summary>ツール名を取得</summary>
-        public string ToolName => toolName;
+        public virtual string ToolName => toolName;
 
         /// <summary>ツールの説明を取得</summary>
-        public string Description => description;
+        public virtual string Description => description;
 
         /// <summary>ツールが有効かどうかを取得</summary>
         public bool IsEnabled => isEnabled;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using uMCP.Editor.Core.Attributes;
@@ -66,6 +67,46 @@ namespace uMCP.Editor.Tools
                     Layer = LayerMask.LayerToName(go.layer),
                     ComponentCount = go.GetComponents<Component>().Length
                 })
+            };
+        }
+
+        /// <summary>指定したGameObjectの階層構造を分析</summary>
+        [McpServerTool, Description("指定したGameObjectとその子階層の構造を詳細分析")]
+        public async ValueTask<object> GetHierarchyAnalysis(
+            [Description("分析対象のGameObjectの名前（デフォルト：Canvas）")] string gameObjectName = "Canvas")
+        {
+            await UniTask.SwitchToMainThread();
+
+            if (string.IsNullOrEmpty(gameObjectName))
+                gameObjectName = "Canvas";
+
+            // GameObjectを探す
+            var gameObject = GameObject.Find(gameObjectName);
+            if (gameObject == null)
+            {
+                var allGameObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+                gameObject = allGameObjects.FirstOrDefault(go => go.name.Contains(gameObjectName));
+            }
+
+            if (gameObject == null)
+            {
+                return new ErrorResponse
+                {
+                    Success = false,
+                    Error = $"GameObject '{gameObjectName}' not found"
+                };
+            }
+
+            var analysis = AnalyzeHierarchy(gameObject);
+
+            return new HierarchyAnalysisResponse
+            {
+                Success = true,
+                ObjectType = "hierarchy_analysis",
+                AnalysisTimestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                UnityVersion = Application.unityVersion,
+                RootObject = BuildHierarchyNode(gameObject),
+                Analysis = analysis
             };
         }
 
@@ -168,7 +209,8 @@ namespace uMCP.Editor.Tools
                     FullType = c.GetType().FullName,
                     Category = GetComponentCategory(c.GetType()),
                     Enabled = c is Behaviour behaviour ? behaviour.enabled : true,
-                    Description = GetComponentDescription(c.GetType())
+                    Description = GetComponentDescription(c.GetType()),
+                    Properties = GetComponentProperties(c)
                 }).ToArray(),
                 Hierarchy = new HierarchyInfo
                 {
@@ -308,7 +350,7 @@ namespace uMCP.Editor.Tools
             
             if (typeName.Contains("Transform"))
                 return "Transform";
-            if (namespaceName == "UnityEngine.UI" || typeName.Contains("UI"))
+            if (namespaceName == "UnityEngine.UI")
                 return "UI";
             if (typeName.Contains("Renderer") || typeName.Contains("Material"))
                 return "Rendering";
@@ -324,6 +366,9 @@ namespace uMCP.Editor.Tools
                 return "Animation";
             if (namespaceName?.Contains("UnityEngine") == true)
                 return "Unity Built-in";
+            // カスタムUIコンポーネントの判定を追加
+            if (typeName.Contains("UI") && namespaceName != "UnityEngine.UI")
+                return "Custom UI";
                 
             return "Custom";
         }
@@ -364,6 +409,587 @@ namespace uMCP.Editor.Tools
             }
             
             return depth;
+        }
+
+        /// <summary>コンポーネントのプロパティを取得</summary>
+        Dictionary<string, object> GetComponentProperties(Component component)
+        {
+            if (component == null) return null;
+
+            var componentType = component.GetType();
+            var properties = new Dictionary<string, object>();
+
+            // Unity組み込みコンポーネントは基本情報のみ
+            if (componentType.Namespace?.StartsWith("UnityEngine") == true)
+            {
+                return GetUnityComponentProperties(component);
+            }
+
+            // カスタムコンポーネントは詳細解析
+            try
+            {
+                return GetCustomComponentProperties(component);
+            }
+            catch (Exception ex)
+            {
+                return new Dictionary<string, object>
+                {
+                    ["error"] = $"Failed to analyze properties: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>Unity組み込みコンポーネントの基本プロパティを取得</summary>
+        Dictionary<string, object> GetUnityComponentProperties(Component component)
+        {
+            var properties = new Dictionary<string, object>();
+            var componentType = component.GetType();
+
+            switch (componentType.Name)
+            {
+                case "Transform":
+                    var transform = component as Transform;
+                    properties["childCount"] = transform.childCount;
+                    properties["hasChanged"] = transform.hasChanged;
+                    break;
+
+                case "RectTransform":
+                    var rectTransform = component as RectTransform;
+                    properties["anchoredPosition"] = FormatVector2(rectTransform.anchoredPosition);
+                    properties["sizeDelta"] = FormatVector2(rectTransform.sizeDelta);
+                    properties["anchorMin"] = FormatVector2(rectTransform.anchorMin);
+                    properties["anchorMax"] = FormatVector2(rectTransform.anchorMax);
+                    break;
+
+                case "Image":
+                    var image = component as UnityEngine.UI.Image;
+                    properties["sprite"] = GetObjectReference(image.sprite);
+                    properties["color"] = FormatColor(image.color);
+                    properties["type"] = image.type.ToString();
+                    properties["fillAmount"] = image.fillAmount;
+                    break;
+
+                case "Button":
+                    var button = component as UnityEngine.UI.Button;
+                    properties["interactable"] = button.interactable;
+                    properties["targetGraphic"] = GetObjectReference(button.targetGraphic);
+                    break;
+
+                case "Canvas":
+                    var canvas = component as Canvas;
+                    properties["renderMode"] = canvas.renderMode.ToString();
+                    properties["sortingOrder"] = canvas.sortingOrder;
+                    break;
+            }
+
+            return properties.Count > 0 ? properties : null;
+        }
+
+        /// <summary>カスタムコンポーネントの詳細プロパティを取得</summary>
+        Dictionary<string, object> GetCustomComponentProperties(Component component)
+        {
+            var properties = new Dictionary<string, object>();
+            var componentType = component.GetType();
+
+            // Publicフィールドを取得
+            var publicFields = componentType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            foreach (var field in publicFields)
+            {
+                if (ShouldIncludeField(field))
+                {
+                    try
+                    {
+                        var value = field.GetValue(component);
+                        properties[field.Name] = ConvertToJsonFriendly(value, field.FieldType);
+                    }
+                    catch (Exception ex)
+                    {
+                        properties[field.Name] = $"Error: {ex.Message}";
+                    }
+                }
+            }
+
+            // SerializeFieldを取得
+            var serializedFields = componentType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(f => f.GetCustomAttribute<SerializeField>() != null);
+
+            foreach (var field in serializedFields)
+            {
+                if (ShouldIncludeField(field))
+                {
+                    try
+                    {
+                        var value = field.GetValue(component);
+                        properties[field.Name] = ConvertToJsonFriendly(value, field.FieldType);
+                    }
+                    catch (Exception ex)
+                    {
+                        properties[field.Name] = $"Error: {ex.Message}";
+                    }
+                }
+            }
+
+            // Publicプロパティを取得（setter付きのもの）
+            var publicProperties = componentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead && p.CanWrite && p.GetIndexParameters().Length == 0);
+
+            foreach (var property in publicProperties)
+            {
+                if (ShouldIncludeProperty(property))
+                {
+                    try
+                    {
+                        var value = property.GetValue(component);
+                        properties[property.Name] = ConvertToJsonFriendly(value, property.PropertyType);
+                    }
+                    catch (Exception ex)
+                    {
+                        properties[property.Name] = $"Error: {ex.Message}";
+                    }
+                }
+            }
+
+            return properties.Count > 0 ? properties : null;
+        }
+
+        /// <summary>フィールドを含めるべきかチェック</summary>
+        bool ShouldIncludeField(FieldInfo field)
+        {
+            // 除外するフィールド
+            var excludeNames = new[] { "m_", "k_", "_" };
+            if (excludeNames.Any(exclude => field.Name.StartsWith(exclude)))
+                return false;
+
+            // Unity内部フィールドを除外
+            if (field.FieldType.Namespace?.StartsWith("UnityEngine") == true &&
+                (field.FieldType.Name.Contains("Internal") || field.FieldType.Name.StartsWith("_")))
+                return false;
+
+            return true;
+        }
+
+        /// <summary>プロパティを含めるべきかチェック</summary>
+        bool ShouldIncludeProperty(PropertyInfo property)
+        {
+            // 除外するプロパティ名
+            var excludeNames = new[] { "hideFlags", "name", "tag", "transform", "gameObject" };
+            if (excludeNames.Contains(property.Name))
+                return false;
+
+            return true;
+        }
+
+        /// <summary>値をJSON対応の形式に変換</summary>
+        object ConvertToJsonFriendly(object value, Type valueType)
+        {
+            if (value == null) return null;
+
+            // プリミティブ型
+            if (valueType.IsPrimitive || valueType == typeof(string))
+                return value;
+
+            // Unity Vector types
+            if (valueType == typeof(Vector2))
+            {
+                var v = (Vector2)value;
+                return FormatVector2(v);
+            }
+            if (valueType == typeof(Vector3))
+            {
+                var v = (Vector3)value;
+                return new { x = v.x, y = v.y, z = v.z };
+            }
+            if (valueType == typeof(Vector4))
+            {
+                var v = (Vector4)value;
+                return new { x = v.x, y = v.y, z = v.z, w = v.w };
+            }
+
+            // Color
+            if (valueType == typeof(Color))
+            {
+                return FormatColor((Color)value);
+            }
+
+            // UnityEngine.Object参照
+            if (typeof(Object).IsAssignableFrom(valueType))
+            {
+                return GetObjectReference(value as Object);
+            }
+
+            // Enum
+            if (valueType.IsEnum)
+            {
+                return value.ToString();
+            }
+
+            // カスタムクラス（Serializable）
+            if (valueType.GetCustomAttribute<System.SerializableAttribute>() != null)
+            {
+                return SerializeCustomObject(value);
+            }
+
+            // その他は文字列表現
+            return value.ToString();
+        }
+
+        /// <summary>カスタムオブジェクトをシリアライズ</summary>
+        object SerializeCustomObject(object obj)
+        {
+            if (obj == null) return null;
+
+            var result = new Dictionary<string, object>();
+            var objType = obj.GetType();
+
+            var publicFields = objType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            foreach (var field in publicFields)
+            {
+                try
+                {
+                    var value = field.GetValue(obj);
+                    result[field.Name] = ConvertToJsonFriendly(value, field.FieldType);
+                }
+                catch
+                {
+                    result[field.Name] = "Error reading field";
+                }
+            }
+
+            return result.Count > 0 ? result : obj.ToString();
+        }
+
+        /// <summary>Vector2を辞書形式に変換</summary>
+        object FormatVector2(Vector2 vector)
+        {
+            return new { x = vector.x, y = vector.y };
+        }
+
+        /// <summary>Colorを辞書形式に変換</summary>
+        object FormatColor(Color color)
+        {
+            return new 
+            { 
+                r = color.r, 
+                g = color.g, 
+                b = color.b, 
+                a = color.a,
+                hex = ColorUtility.ToHtmlStringRGBA(color)
+            };
+        }
+
+        /// <summary>UnityEngine.Object参照の状態を取得</summary>
+        object GetObjectReference(Object obj)
+        {
+            if (obj == null) return "null";
+            
+            return new
+            {
+                name = obj.name,
+                type = obj.GetType().Name,
+                instanceId = obj.GetInstanceID(),
+                status = "connected"
+            };
+        }
+
+        /// <summary>階層構造を分析</summary>
+        HierarchyAnalysis AnalyzeHierarchy(GameObject rootObject)
+        {
+            var allObjects = new List<GameObject>();
+            var uiElements = new UIAnalysis();
+            var performanceConcerns = new List<string>();
+            var designIssues = new List<string>();
+            var missingReferences = new List<string>();
+            var recommendations = new List<string>();
+
+            CollectAllChildren(rootObject, allObjects);
+            
+            int maxDepth = CalculateMaxDepth(rootObject);
+            AnalyzeUIElements(allObjects, uiElements);
+            AnalyzePerformance(allObjects, performanceConcerns);
+            AnalyzeDesign(allObjects, designIssues);
+            AnalyzeMissingReferences(allObjects, missingReferences);
+            GenerateRecommendations(allObjects, uiElements, recommendations);
+
+            return new HierarchyAnalysis
+            {
+                TotalObjects = allObjects.Count,
+                MaxDepth = maxDepth,
+                UIElements = uiElements,
+                PerformanceConcerns = performanceConcerns.ToArray(),
+                DesignIssues = designIssues.ToArray(),
+                MissingReferences = missingReferences.ToArray(),
+                Recommendations = recommendations.ToArray()
+            };
+        }
+
+        /// <summary>階層ノードを構築</summary>
+        HierarchyNode BuildHierarchyNode(GameObject gameObject)
+        {
+            var components = gameObject.GetComponents<Component>();
+            var keyComponents = components.Where(c => c != null)
+                .Select(c => c.GetType().Name)
+                .Where(name => IsKeyComponent(name))
+                .ToArray();
+
+            var issues = new List<string>();
+            AnalyzeObjectIssues(gameObject, issues);
+
+            var children = new List<HierarchyNode>();
+            for (int i = 0; i < gameObject.transform.childCount; i++)
+            {
+                var child = gameObject.transform.GetChild(i).gameObject;
+                children.Add(BuildHierarchyNode(child));
+            }
+
+            return new HierarchyNode
+            {
+                Name = gameObject.name,
+                Type = GetGameObjectType(gameObject),
+                Active = gameObject.activeSelf,
+                Tag = gameObject.tag,
+                Layer = LayerMask.LayerToName(gameObject.layer),
+                ComponentCount = components.Length,
+                KeyComponents = keyComponents,
+                Issues = issues.Count > 0 ? issues.ToArray() : null,
+                Children = children.Count > 0 ? children.ToArray() : null
+            };
+        }
+
+        /// <summary>すべての子オブジェクトを収集</summary>
+        void CollectAllChildren(GameObject parent, List<GameObject> allObjects)
+        {
+            allObjects.Add(parent);
+            for (int i = 0; i < parent.transform.childCount; i++)
+            {
+                CollectAllChildren(parent.transform.GetChild(i).gameObject, allObjects);
+            }
+        }
+
+        /// <summary>最大深度を計算</summary>
+        int CalculateMaxDepth(GameObject rootObject)
+        {
+            int maxDepth = 0;
+            CalculateDepthRecursive(rootObject.transform, 0, ref maxDepth);
+            return maxDepth;
+        }
+
+        void CalculateDepthRecursive(Transform transform, int currentDepth, ref int maxDepth)
+        {
+            maxDepth = Math.Max(maxDepth, currentDepth);
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                CalculateDepthRecursive(transform.GetChild(i), currentDepth + 1, ref maxDepth);
+            }
+        }
+
+        /// <summary>UI要素を分析</summary>
+        void AnalyzeUIElements(List<GameObject> allObjects, UIAnalysis uiElements)
+        {
+            foreach (var obj in allObjects)
+            {
+                var components = obj.GetComponents<Component>();
+                foreach (var component in components)
+                {
+                    if (component == null) continue;
+                    
+                    var typeName = component.GetType().Name;
+                    switch (typeName)
+                    {
+                        case "Canvas":
+                            uiElements.CanvasCount++;
+                            break;
+                        case "Button":
+                            uiElements.ButtonCount++;
+                            break;
+                        case "Text":
+                        case "TextMeshPro":
+                        case "TextMeshProUGUI":
+                            uiElements.TextCount++;
+                            break;
+                        case "Image":
+                        case "RawImage":
+                            uiElements.ImageCount++;
+                            break;
+                        case "InputField":
+                        case "TMP_InputField":
+                            uiElements.InputCount++;
+                            break;
+                        case "HorizontalLayoutGroup":
+                        case "VerticalLayoutGroup":
+                        case "GridLayoutGroup":
+                            uiElements.LayoutGroups++;
+                            break;
+                        default:
+                            if (component.GetType().Namespace != null && 
+                                !component.GetType().Namespace.StartsWith("UnityEngine"))
+                            {
+                                uiElements.CustomUICount++;
+                            }
+                            break;
+                    }
+                }
+            }
+
+            uiElements.UIStructure = DetermineUIStructure(uiElements);
+        }
+
+        /// <summary>パフォーマンス問題を分析</summary>
+        void AnalyzePerformance(List<GameObject> allObjects, List<string> concerns)
+        {
+            if (allObjects.Count > 100)
+            {
+                concerns.Add($"Large hierarchy: {allObjects.Count} objects may impact performance");
+            }
+
+            var canvasCount = allObjects.Count(obj => obj.GetComponent<Canvas>() != null);
+            if (canvasCount > 3)
+            {
+                concerns.Add($"Multiple Canvas components ({canvasCount}) may cause overdraw");
+            }
+
+            var imageCount = allObjects.Count(obj => obj.GetComponent<UnityEngine.UI.Image>() != null);
+            if (imageCount > 20)
+            {
+                concerns.Add($"Many Image components ({imageCount}) may impact fill rate");
+            }
+        }
+
+        /// <summary>デザイン問題を分析</summary>
+        void AnalyzeDesign(List<GameObject> allObjects, List<string> issues)
+        {
+            var inactiveObjects = allObjects.Where(obj => !obj.activeSelf).ToList();
+            if (inactiveObjects.Count > allObjects.Count * 0.3f)
+            {
+                issues.Add($"Many inactive objects ({inactiveObjects.Count}/{allObjects.Count}) - consider cleanup");
+            }
+
+            var untaggedObjects = allObjects.Where(obj => obj.tag == "Untagged").ToList();
+            if (untaggedObjects.Count > allObjects.Count * 0.8f)
+            {
+                issues.Add("Most objects are untagged - consider proper tagging for organization");
+            }
+
+            var layoutGroups = allObjects.Count(obj => 
+                obj.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>() != null ||
+                obj.GetComponent<UnityEngine.UI.VerticalLayoutGroup>() != null ||
+                obj.GetComponent<UnityEngine.UI.GridLayoutGroup>() != null);
+            
+            var uiElements = allObjects.Count(obj => 
+                obj.GetComponent<UnityEngine.UI.Image>() != null ||
+                obj.GetComponent<UnityEngine.UI.Button>() != null);
+
+            if (uiElements > 5 && layoutGroups == 0)
+            {
+                issues.Add("UI elements without layout management - consider using Layout Groups");
+            }
+        }
+
+        /// <summary>参照の欠落を分析</summary>
+        void AnalyzeMissingReferences(List<GameObject> allObjects, List<string> missing)
+        {
+            foreach (var obj in allObjects)
+            {
+                var components = obj.GetComponents<Component>();
+                foreach (var component in components)
+                {
+                    if (component == null) continue;
+
+                    // カスタムコンポーネントの参照チェック
+                    if (component.GetType().Namespace != null && 
+                        !component.GetType().Namespace.StartsWith("UnityEngine"))
+                    {
+                        CheckMissingReferences(component, missing);
+                    }
+                }
+            }
+        }
+
+        /// <summary>推奨事項を生成</summary>
+        void GenerateRecommendations(List<GameObject> allObjects, UIAnalysis uiElements, List<string> recommendations)
+        {
+            if (uiElements.LayoutGroups == 0 && (uiElements.ButtonCount + uiElements.ImageCount) > 3)
+            {
+                recommendations.Add("Add Layout Groups for better UI organization and responsive design");
+            }
+
+            if (uiElements.CustomUICount > 0)
+            {
+                recommendations.Add("Verify custom UI components have proper references and are functioning correctly");
+            }
+
+            if (allObjects.Count > 50)
+            {
+                recommendations.Add("Consider object pooling or LOD system for performance optimization");
+            }
+
+            var canvasObjects = allObjects.Where(obj => obj.GetComponent<Canvas>() != null).ToList();
+            if (canvasObjects.Count > 1)
+            {
+                recommendations.Add("Multiple Canvas detected - ensure proper render order and consider merging if possible");
+            }
+        }
+
+        /// <summary>重要なコンポーネントかチェック</summary>
+        bool IsKeyComponent(string componentName)
+        {
+            var keyComponents = new[] 
+            { 
+                "Canvas", "Button", "Image", "Text", "TextMeshPro", "TextMeshProUGUI",
+                "Slider", "InputField", "ScrollRect", "LayoutGroup", "ContentSizeFitter"
+            };
+            
+            return keyComponents.Any(key => componentName.Contains(key)) || 
+                   !componentName.StartsWith("UnityEngine");
+        }
+
+        /// <summary>オブジェクト固有の問題を分析</summary>
+        void AnalyzeObjectIssues(GameObject gameObject, List<string> issues)
+        {
+            if (!gameObject.activeSelf)
+            {
+                issues.Add("Object is inactive");
+            }
+
+            var image = gameObject.GetComponent<UnityEngine.UI.Image>();
+            if (image != null && image.sprite == null)
+            {
+                issues.Add("Image component without sprite");
+            }
+
+            var button = gameObject.GetComponent<UnityEngine.UI.Button>();
+            if (button != null && !button.interactable)
+            {
+                issues.Add("Button is not interactable");
+            }
+        }
+
+        /// <summary>参照の欠落をチェック</summary>
+        void CheckMissingReferences(Component component, List<string> missing)
+        {
+            var componentType = component.GetType();
+            var fields = componentType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            
+            foreach (var field in fields)
+            {
+                if (typeof(Object).IsAssignableFrom(field.FieldType))
+                {
+                    var value = field.GetValue(component);
+                    if (value == null)
+                    {
+                        missing.Add($"{component.gameObject.name}.{componentType.Name}.{field.Name} is null");
+                    }
+                }
+            }
+        }
+
+        /// <summary>UI構造のタイプを判定</summary>
+        string DetermineUIStructure(UIAnalysis ui)
+        {
+            if (ui.CanvasCount == 0) return "Non-UI Structure";
+            if (ui.LayoutGroups > 0) return "Managed Layout";
+            if (ui.ButtonCount > 0 || ui.InputCount > 0) return "Interactive UI";
+            if (ui.ImageCount > 0 || ui.TextCount > 0) return "Display UI";
+            return "Basic Canvas";
         }
     }
 }

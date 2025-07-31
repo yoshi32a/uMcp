@@ -792,6 +792,7 @@ namespace uMCP.Editor.Core
             builder.AddSingleton(new Tools.ConsoleLogToolImplementation());
             builder.AddSingleton(new Tools.TestRunnerToolImplementation());
             builder.AddSingleton(new Tools.EditorExtensionToolImplementation());
+            builder.AddSingleton(new Tools.ToolWorkflowSuggestionImplementation());
         }
 
         /// <summary>カスタムツールをサービスコレクションに読み込みます</summary>

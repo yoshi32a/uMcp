@@ -58,18 +58,23 @@ namespace uMCP.Editor.Tools
                                     ?? logEntry.GetType().GetField("message")?.GetValue(logEntry)?.ToString() ?? "";
                     var mode = (int)(logEntry.GetType().GetField("mode")?.GetValue(logEntry) ?? 0);
 
-                    // メッセージ内容からログタイプを判定（fallback）
+                    // modeによる正確な判定（Unity内部実装）
                     string logType = "Log";
-                    if (condition.Contains("UnityEngine.Debug:LogError"))
-                        logType = "Error";
-                    else if (condition.Contains("UnityEngine.Debug:LogWarning"))
-                        logType = "Warning";
-                    else if (condition.Contains("UnityEngine.Debug:LogException"))
-                        logType = "Error";
-
-                    // modeによる判定も試行（Unity内部実装用）
-                    if ((mode & 0x10) != 0) logType = "Error";
-                    else if ((mode & 0x20) != 0) logType = "Warning";
+                    if ((mode & (1 << 0)) != 0) logType = "Error";       // Error flag
+                    else if ((mode & (1 << 1)) != 0) logType = "Warning"; // Warning flag
+                    
+                    // メッセージ内容からのfallback判定
+                    if (logType == "Log")
+                    {
+                        if (condition.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+                            condition.Contains("exception", StringComparison.OrdinalIgnoreCase) ||
+                            condition.Contains("UnityEngine.Debug:LogError") ||
+                            condition.Contains("UnityEngine.Debug:LogException"))
+                            logType = "Error";
+                        else if (condition.Contains("warning", StringComparison.OrdinalIgnoreCase) ||
+                                condition.Contains("UnityEngine.Debug:LogWarning"))
+                            logType = "Warning";
+                    }
 
                     // フィルタリング
                     if (errorsOnly && logType != "Error") continue;

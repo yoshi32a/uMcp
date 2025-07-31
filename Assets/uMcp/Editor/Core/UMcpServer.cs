@@ -628,29 +628,43 @@ namespace uMCP.Editor.Core
                     var result = method.Invoke(serviceInstance, args);
 
                     // 非同期メソッドの場合の処理
-                    if (result is ValueTask valueTask)
+                    if (result != null)
                     {
-                        await valueTask;
-                        var valueTaskType = valueTask.GetType();
-                        if (valueTaskType.IsGenericType)
+                        var resultType = result.GetType();
+                        
+                        // ValueTask<T>の場合
+                        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(ValueTask<>))
                         {
-                            var resultProperty = valueTaskType.GetProperty("Result");
-                            return resultProperty?.GetValue(valueTask);
-                        }
-
-                        return null;
-                    }
-                    else if (result is Task task)
-                    {
-                        await task;
-                        var taskType = task.GetType();
-                        if (taskType.IsGenericType)
-                        {
-                            var resultProperty = taskType.GetProperty("Result");
+                            // AsTaskメソッドを使用してTaskに変換
+                            var asTaskMethod = resultType.GetMethod("AsTask");
+                            var task = asTaskMethod.Invoke(result, null) as Task;
+                            await task;
+                            
+                            // Task<T>から結果を取得
+                            var resultProperty = task.GetType().GetProperty("Result");
                             return resultProperty?.GetValue(task);
                         }
-
-                        return null;
+                        // ValueTask（非ジェネリック）の場合
+                        else if (resultType == typeof(ValueTask))
+                        {
+                            var valueTask = (ValueTask)result;
+                            await valueTask;
+                            return null;
+                        }
+                        // Task<T>の場合
+                        else if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Task<>))
+                        {
+                            var task = (Task)result;
+                            await task;
+                            var resultProperty = resultType.GetProperty("Result");
+                            return resultProperty?.GetValue(task);
+                        }
+                        // Task（非ジェネリック）の場合
+                        else if (result is Task task)
+                        {
+                            await task;
+                            return null;
+                        }
                     }
 
                     return result;

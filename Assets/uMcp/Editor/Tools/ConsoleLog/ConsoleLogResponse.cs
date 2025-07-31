@@ -6,7 +6,6 @@ namespace uMCP.Editor.Tools
     public class ConsoleLogResponse
     {
         public bool Success { get; set; }
-        public string Error { get; set; }
 
         [JsonPropertyName("total_logs_in_console")]
         public int TotalLogsInConsole { get; set; }

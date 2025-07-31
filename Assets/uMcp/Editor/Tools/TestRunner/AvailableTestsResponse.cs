@@ -6,7 +6,6 @@ namespace uMCP.Editor.Tools
     public class AvailableTestsResponse
     {
         public bool Success { get; set; }
-        public string Error { get; set; }
 
         [JsonPropertyName("requested_mode")] public string RequestedMode { get; set; }
 

@@ -6,7 +6,6 @@ namespace uMCP.Editor.Tools
     {
         public bool Success { get; set; }
         public string Message { get; set; }
-        public string Error { get; set; }
 
         [JsonPropertyName("duration_ms")] public double DurationMs { get; set; }
 

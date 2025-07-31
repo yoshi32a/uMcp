@@ -5,7 +5,6 @@ namespace uMCP.Editor.Tools
     public class LogStatisticsResponse
     {
         public bool Success { get; set; }
-        public string Error { get; set; }
 
         [JsonPropertyName("total_logs")] public int TotalLogs { get; set; }
 

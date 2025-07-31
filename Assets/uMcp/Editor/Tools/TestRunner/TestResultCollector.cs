@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
@@ -11,7 +10,7 @@ namespace uMCP.Editor.Tools
     /// <summary>テスト結果収集クラス</summary>
     internal class TestResultCollector : ICallbacks
     {
-        UniTaskCompletionSource<TestRunResponse> completionSource = new();
+        readonly UniTaskCompletionSource<TestRunResponse> completionSource = new();
         TestRunResponse currentResult = new();
         DateTime startTime;
 
@@ -19,11 +18,11 @@ namespace uMCP.Editor.Tools
         {
             try
             {
-                using (cancellationToken.Register(() =>
-                       {
-                           Debug.Log("[uMCP TestResultCollector] Cancellation requested");
-                           completionSource.TrySetCanceled();
-                       }))
+                await using (cancellationToken.Register(() =>
+                             {
+                                 Debug.Log("[uMCP TestResultCollector] Cancellation requested");
+                                 completionSource.TrySetCanceled();
+                             }))
                 {
                     Debug.Log("[uMCP TestResultCollector] Waiting for test completion...");
                     var result = await completionSource.Task;

@@ -47,7 +47,7 @@ namespace uMCP.Editor.Tools
                 {
                     Success = false,
                     Error = "Cannot run PlayMode tests while compiling",
-                    TestMode = TestMode.PlayMode.ToString()
+                    TestMode = nameof(TestMode.PlayMode)
                 };
             }
 
@@ -57,7 +57,7 @@ namespace uMCP.Editor.Tools
                 {
                     Success = false,
                     Error = "Cannot run PlayMode tests while already in Play Mode",
-                    TestMode = TestMode.PlayMode.ToString()
+                    TestMode = nameof(TestMode.PlayMode)
                 };
             }
 
@@ -71,11 +71,9 @@ namespace uMCP.Editor.Tools
         [McpServerTool, Description("プロジェクト内の利用可能なテスト一覧を取得")]
         public async ValueTask<object> GetAvailableTests(
             [Description("テストモード: EditMode, PlayMode, または All")]
-            string testMode = "All",
-            [Description("実際のテスト数を取得するか（時間がかかる場合があります）")]
-            bool enableCountTest = false)
+            string testMode = "All")
         {
-            Debug.Log($"[uMCP TestRunner] GetAvailableTests START with testMode: {testMode}, enableCountTest: {enableCountTest}");
+            Debug.Log($"[uMCP TestRunner] GetAvailableTests START with testMode: {testMode}");
             await UniTask.SwitchToMainThread();
 
             var testModeInfos = new List<TestModeInfo>();
@@ -93,31 +91,21 @@ namespace uMCP.Editor.Tools
             TestRunnerApi testRunnerApi = null;
             try
             {
-                if (enableCountTest)
-                {
-                    testRunnerApi = ScriptableObject.CreateInstance<TestRunnerApi>();
-                }
+                testRunnerApi = ScriptableObject.CreateInstance<TestRunnerApi>();
 
                 if (normalizedMode is "All" or "EditMode")
                 {
                     int editModeCount = 0;
                     string editModeMessage;
 
-                    if (enableCountTest && testRunnerApi != null)
+                    try
                     {
-                        try
-                        {
-                            editModeCount = await GetTestCountSafe(testRunnerApi, TestMode.EditMode);
-                            editModeMessage = $"EditMode tests found: {editModeCount}";
-                        }
-                        catch (Exception ex)
-                        {
-                            editModeMessage = $"EditMode test count failed: {ex.Message}";
-                        }
+                        editModeCount = await GetTestCountSafe(testRunnerApi, TestMode.EditMode);
+                        editModeMessage = $"EditMode tests found: {editModeCount}";
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        editModeMessage = "EditMode framework available (count disabled for fast response)";
+                        editModeMessage = $"EditMode test count failed: {ex.Message}";
                     }
 
                     testModeInfos.Add(new TestModeInfo
@@ -133,21 +121,14 @@ namespace uMCP.Editor.Tools
                     int playModeCount = 0;
                     string playModeMessage;
 
-                    if (enableCountTest && testRunnerApi != null)
+                    try
                     {
-                        try
-                        {
-                            playModeCount = await GetTestCountSafe(testRunnerApi, TestMode.PlayMode);
-                            playModeMessage = $"PlayMode tests found: {playModeCount}";
-                        }
-                        catch (Exception ex)
-                        {
-                            playModeMessage = $"PlayMode test count failed: {ex.Message}";
-                        }
+                        playModeCount = await GetTestCountSafe(testRunnerApi, TestMode.PlayMode);
+                        playModeMessage = $"PlayMode tests found: {playModeCount}";
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        playModeMessage = "PlayMode framework available (count disabled for fast response)";
+                        playModeMessage = $"PlayMode test count failed: {ex.Message}";
                     }
 
                     testModeInfos.Add(new TestModeInfo
@@ -165,7 +146,7 @@ namespace uMCP.Editor.Tools
                     Success = true,
                     RequestedMode = testMode,
                     Tests = testModeInfos,
-                    Note = enableCountTest ? "Test counting enabled - actual test counts retrieved" : "Test counting disabled for faster response",
+                    Note = "Actual test counts retrieved",
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 };
             }
@@ -173,7 +154,7 @@ namespace uMCP.Editor.Tools
             {
                 if (testRunnerApi != null)
                 {
-                    ScriptableObject.DestroyImmediate(testRunnerApi);
+                    UnityEngine.Object.DestroyImmediate(testRunnerApi);
                 }
             }
         }
@@ -256,7 +237,7 @@ namespace uMCP.Editor.Tools
             }
             finally
             {
-                timeoutCts?.Dispose();
+                timeoutCts.Dispose();
             }
         }
 
@@ -450,7 +431,7 @@ namespace uMCP.Editor.Tools
 
                     if (testRunnerApi != null)
                     {
-                        ScriptableObject.DestroyImmediate(testRunnerApi);
+                        UnityEngine.Object.DestroyImmediate(testRunnerApi);
                         Debug.Log($"[uMCP TestRunner] Destroyed TestRunnerApi for {testMode}");
                     }
                 }

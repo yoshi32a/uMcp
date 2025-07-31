@@ -4,8 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using uMCP.Editor.Core.Attributes;
-using UnityEditor;
-using UnityEngine;
 
 namespace uMCP.Editor.Tools
 {

@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using UnityEditor;
 using UnityEngine;
 
 namespace uMCP.Editor.Tools
@@ -191,7 +189,6 @@ namespace uMCP.Editor.Tools
             var content = File.ReadAllText(triggerFile);
             var lines = content.Split('\n');
             var currentTool = "";
-            var currentSection = "";
 
             foreach (var line in lines)
             {
@@ -208,7 +205,7 @@ namespace uMCP.Editor.Tools
                 }
                 else if (trimmedLine.StartsWith("#### キーワード:"))
                 {
-                    currentSection = "context";
+                    // コンテキストセクション開始（現在未使用）
                 }
                 else if (trimmedLine.StartsWith("- 推奨:") && !string.IsNullOrEmpty(currentTool))
                 {

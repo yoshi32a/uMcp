@@ -10,7 +10,7 @@
 
 **Unity MCP Server** は、完全に実装されたModel Context Protocol (MCP) サーバーパッケージです。Unity Natural MCPを参考にしつつ、独自の改良を加えたUnity Editor統合MCPサーバーとして開発されました。
 
-**Unityバージョン:** 6000.0以上  
+**Unityバージョン:** 2022.3 LTS以上  
 **パッケージ名:** com.umcp.unity-mcp-server  
 **配布方式:** Unity Package (.unitypackage / Git URL)  
 **ライセンス:** MIT License

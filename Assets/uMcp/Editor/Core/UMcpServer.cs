@@ -242,6 +242,7 @@ namespace uMCP.Editor.Core
                 }
                 catch
                 {
+                    // ignored
                 }
             }
             finally
@@ -252,6 +253,7 @@ namespace uMCP.Editor.Core
                 }
                 catch
                 {
+                    // ignored
                 }
             }
         }
@@ -294,7 +296,7 @@ namespace uMCP.Editor.Core
             mcpSession.LastAccessed = DateTime.Now;
 
             // リクエストを処理
-            var mcpResponse = await ProcessMcpRequest(jsonRpcRequest, mcpSession, token);
+            var mcpResponse = await ProcessMcpRequest(jsonRpcRequest, token);
 
             // レスポンスヘッダーを設定
             response.Headers.Add("Mcp-Session-Id", sessionId);
@@ -311,7 +313,7 @@ namespace uMCP.Editor.Core
         }
 
         /// <summary>MCPリクエストを直接処理します</summary>
-        async UniTask<JsonRpcResponse> ProcessMcpRequest(JsonRpcRequest request, McpSession session, CancellationToken token)
+        async UniTask<JsonRpcResponse> ProcessMcpRequest(JsonRpcRequest request, CancellationToken token)
         {
             try
             {
@@ -624,7 +626,7 @@ namespace uMCP.Editor.Core
                     if (result != null)
                     {
                         var resultType = result.GetType();
-                        
+
                         // ValueTask<T>の場合
                         if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(ValueTask<>))
                         {
@@ -632,26 +634,29 @@ namespace uMCP.Editor.Core
                             var asTaskMethod = resultType.GetMethod("AsTask");
                             var task = asTaskMethod.Invoke(result, null) as Task;
                             await task;
-                            
+
                             // Task<T>から結果を取得
                             var resultProperty = task.GetType().GetProperty("Result");
                             return resultProperty?.GetValue(task);
                         }
+
                         // ValueTask（非ジェネリック）の場合
-                        else if (resultType == typeof(ValueTask))
+                        if (resultType == typeof(ValueTask))
                         {
                             var valueTask = (ValueTask)result;
                             await valueTask;
                             return null;
                         }
+
                         // Task<T>の場合
-                        else if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Task<>))
+                        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Task<>))
                         {
                             var task = (Task)result;
                             await task;
                             var resultProperty = resultType.GetProperty("Result");
                             return resultProperty?.GetValue(task);
                         }
+
                         // Task（非ジェネリック）の場合
                         else if (result is Task task)
                         {
@@ -679,13 +684,13 @@ namespace uMCP.Editor.Core
             // プリミティブ型の変換
             if (targetType == typeof(string))
                 return value.ToString();
-            else if (targetType == typeof(int))
+            if (targetType == typeof(int))
                 return int.TryParse(value.ToString(), out var intVal) ? intVal : 0;
-            else if (targetType == typeof(bool))
+            if (targetType == typeof(bool))
                 return bool.TryParse(value.ToString(), out var boolVal) ? boolVal : false;
-            else if (targetType == typeof(double))
+            if (targetType == typeof(double))
                 return double.TryParse(value.ToString(), out var doubleVal) ? doubleVal : 0.0;
-            else if (targetType.IsArray && targetType.GetElementType() == typeof(string))
+            if (targetType.IsArray && targetType.GetElementType() == typeof(string))
             {
                 // 文字列配列の場合 - JSONElementから変換
                 if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
@@ -699,7 +704,7 @@ namespace uMCP.Editor.Core
                     return list.ToArray();
                 }
 
-                return new string[0];
+                return Array.Empty<string>();
             }
 
             // デフォルト値を返す

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -54,7 +55,7 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>アセットを検索</summary>
-        [McpServerTool, Description("指定したフィルターでアセットを検索")]
+        [McpServerTool, Description("指定したフィルターでアセットを検索（プロジェクトアセット優先表示）")]
         public async ValueTask<object> FindAssets(
             [Description("検索フィルター（ファイル名、タイプなど）")] string filter = "",
             [Description("検索するフォルダパス（空の場合は全体）")] string folder = "",
@@ -65,10 +66,10 @@ namespace uMCP.Editor.Tools
             string[] searchFolders = string.IsNullOrEmpty(folder) ? null : new[] { folder };
             var guids = AssetDatabase.FindAssets(filter, searchFolders);
 
-            var results = guids.Take(maxResults).Select(guid =>
+            var allResults = guids.Select(guid =>
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
-                var asset = AssetDatabase.LoadAssetAtPath<Object>(path);
+                var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
 
                 return new AssetSearchResult
                 {
@@ -79,15 +80,76 @@ namespace uMCP.Editor.Tools
                     SizeBytes = File.Exists(path) ? new FileInfo(path).Length : 0,
                     LastModified = File.Exists(path) ? File.GetLastWriteTime(path).ToString("yyyy-MM-dd HH:mm:ss") : "Unknown"
                 };
-            }).ToArray();
+            }).ToList();
 
-            return new AssetSearchResponse
+            // プロジェクトアセット（Assets/以下）を優先し、パッケージアセットは後回し
+            var projectAssets = allResults.Where(r => r.Path.StartsWith("Assets/")).Take(maxResults).ToList();
+            var packageAssets = allResults.Where(r => r.Path.StartsWith("Packages/")).Take(Math.Max(0, maxResults - projectAssets.Count)).ToList();
+            
+            var results = projectAssets.Concat(packageAssets).ToArray();
+
+            // 読みやすい形式のサマリーを作成
+            var summary = new System.Text.StringBuilder();
+            summary.AppendLine($"=== アセット検索結果 ===");
+            summary.AppendLine($"**検索条件:** {(string.IsNullOrEmpty(filter) ? "全てのアセット" : filter)}");
+            summary.AppendLine($"**検索フォルダ:** {(string.IsNullOrEmpty(folder) ? "プロジェクト全体" : folder)}");
+            summary.AppendLine($"**見つかった件数:** {guids.Length}件（表示: {results.Length}件）");
+            summary.AppendLine();
+
+            if (results.Length > 0)
+            {
+                // タイプ別の統計
+                var typeGroups = results.GroupBy(r => r.Type).OrderByDescending(g => g.Count());
+                summary.AppendLine("**ファイルタイプ別統計:**");
+                foreach (var group in typeGroups.Take(5))
+                {
+                    summary.AppendLine($"- {group.Key}: {group.Count()}件");
+                }
+                summary.AppendLine();
+
+                // プロジェクトアセットとパッケージアセットの分別表示
+                if (projectAssets.Count > 0)
+                {
+                    summary.AppendLine("**プロジェクトアセット:**");
+                    foreach (var asset in projectAssets.Take(10))
+                    {
+                        summary.AppendLine($"- **{asset.Name}** ({asset.Type}) - {asset.Path}");
+                    }
+                    if (projectAssets.Count > 10)
+                    {
+                        summary.AppendLine($"  ...他 {projectAssets.Count - 10}件");
+                    }
+                    summary.AppendLine();
+                }
+
+                if (packageAssets.Count > 0)
+                {
+                    summary.AppendLine("**パッケージアセット:**");
+                    foreach (var asset in packageAssets.Take(5))
+                    {
+                        summary.AppendLine($"- **{asset.Name}** ({asset.Type}) - {asset.Path}");
+                    }
+                    if (packageAssets.Count > 5)
+                    {
+                        summary.AppendLine($"  ...他 {packageAssets.Count - 5}件");
+                    }
+                }
+            }
+            else
+            {
+                summary.AppendLine("**該当するアセットが見つかりませんでした。**");
+            }
+
+            return new
             {
                 Success = true,
+                FormattedOutput = summary.ToString(),
                 SearchFilter = filter,
                 SearchFolder = folder,
                 TotalFound = guids.Length,
                 ReturnedCount = results.Length,
+                ProjectAssets = projectAssets.Count,
+                PackageAssets = packageAssets.Count,
                 Results = results
             };
         }
@@ -107,7 +169,7 @@ namespace uMCP.Editor.Tools
                 };
             }
 
-            var asset = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
+            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
             if (!asset)
             {
                 return new ErrorResponse
@@ -155,7 +217,7 @@ namespace uMCP.Editor.Tools
                 };
             }
 
-            if (!AssetDatabase.LoadAssetAtPath<Object>(assetPath))
+            if (!AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath))
             {
                 return new ErrorResponse
                 {

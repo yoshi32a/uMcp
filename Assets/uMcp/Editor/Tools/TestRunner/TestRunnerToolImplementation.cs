@@ -68,7 +68,7 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>利用可能なテスト一覧を取得</summary>
-        [McpServerTool, Description("プロジェクト内の利用可能なテスト一覧を取得")]
+        [McpServerTool, Description("プロジェクト内の利用可能なテスト一覧を読みやすい形式で取得")]
         public async ValueTask<object> GetAvailableTests(
             [Description("テストモード: EditMode, PlayMode, または All")]
             string testMode = "All")
@@ -141,12 +141,54 @@ namespace uMCP.Editor.Tools
 
                 Debug.Log($"[uMCP TestRunner] GetAvailableTests END - returning {testModeInfos.Count} modes");
 
-                return new AvailableTestsResponse
+                // 読みやすい形式のサマリーを作成
+                var summary = new System.Text.StringBuilder();
+                summary.AppendLine("=== 利用可能なテスト一覧 ===");
+                summary.AppendLine($"**要求モード:** {testMode}");
+                summary.AppendLine();
+
+                int totalTests = testModeInfos.Sum(t => t.TestCount);
+                summary.AppendLine($"**テスト統計:**");
+                summary.AppendLine($"- 合計テスト数: {totalTests}件");
+
+                foreach (var testInfo in testModeInfos)
+                {
+                    var icon = testInfo.Mode switch
+                    {
+                        "EditMode" => "🔧",
+                        "PlayMode" => "▶️",
+                        _ => "📋"
+                    };
+
+                    summary.AppendLine($"- {icon} **{testInfo.Mode}**: {testInfo.TestCount}件");
+                }
+                summary.AppendLine();
+
+                if (totalTests > 0)
+                {
+                    summary.AppendLine("**推奨実行方法:**");
+                    if (testModeInfos.Any(t => t.Mode == "EditMode" && t.TestCount > 0))
+                    {
+                        summary.AppendLine("- EditModeテスト: `run_edit_mode_tests`で実行");
+                    }
+                    if (testModeInfos.Any(t => t.Mode == "PlayMode" && t.TestCount > 0))
+                    {
+                        summary.AppendLine("- PlayModeテスト: `run_play_mode_tests`で高速実行");
+                    }
+                }
+                else
+                {
+                    summary.AppendLine("**⚠️ テストが見つかりませんでした**");
+                    summary.AppendLine("テストスクリプトの作成やTest Runnerの設定を確認してください。");
+                }
+
+                return new
                 {
                     Success = true,
+                    FormattedOutput = summary.ToString(),
                     RequestedMode = testMode,
+                    TotalTests = totalTests,
                     Tests = testModeInfos,
-                    Note = "Actual test counts retrieved",
                     Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 };
             }

@@ -20,12 +20,12 @@ namespace uMCP.Editor.Tools
         static readonly MethodInfo clearMethod = logEntriesType?.GetMethod("Clear", BindingFlags.Public | BindingFlags.Static);
 
         /// <summary>現在のコンソールログを取得</summary>
-        [McpServerTool, Description("現在のUnityコンソールログを取得")]
+        [McpServerTool, Description("現在のUnityコンソールログを読みやすい形式で取得")]
         public async ValueTask<object> GetConsoleLogs(
             [Description("取得する最大ログ数 (1-50)")] int maxLogs = 20,
             [Description("エラーログのみ取得するか")] bool errorsOnly = false,
             [Description("警告ログを含めるか")] bool includeWarnings = true,
-            [Description("メッセージの最大文字数 (50-2000)")] int maxMessageLength = 500)
+            [Description("メッセージの最大文字数 (200-3000)")] int maxMessageLength = 1000)
         {
             await UniTask.SwitchToMainThread();
 
@@ -40,7 +40,7 @@ namespace uMCP.Editor.Tools
 
             // パラメータ制限
             maxLogs = Math.Max(1, Math.Min(maxLogs, 50));
-            maxMessageLength = Math.Max(50, Math.Min(maxMessageLength, 2000));
+            maxMessageLength = Math.Max(200, Math.Min(maxMessageLength, 3000));
 
             var logs = new List<LogEntry>();
             int totalCount = (int)getCountMethod.Invoke(null, null);
@@ -102,12 +102,55 @@ namespace uMCP.Editor.Tools
             var warningCount = logs.Count(l => l.Type == "Warning");
             var infoCount = logs.Count - errorCount - warningCount;
 
-            return new ConsoleLogResponse
+            // 読みやすい形式のサマリーを作成
+            var summary = new System.Text.StringBuilder();
+            summary.AppendLine("=== Unity コンソールログ ===");
+            summary.AppendLine($"**取得条件:** {(errorsOnly ? "エラーのみ" : includeWarnings ? "全てのログ" : "エラーとログのみ")}");
+            summary.AppendLine($"**統計:** エラー {errorCount}件, 警告 {warningCount}件, 情報 {infoCount}件");
+            summary.AppendLine($"**表示:** {logs.Count}件（全{totalCount}件中）");
+            summary.AppendLine();
+
+            if (logs.Count > 0)
+            {
+                summary.AppendLine("**最新のログ:**");
+                foreach (var log in logs.TakeLast(Math.Min(logs.Count, 10)))
+                {
+                    var icon = log.Type switch
+                    {
+                        "Error" => "❌",
+                        "Warning" => "⚠️",
+                        _ => "ℹ️"
+                    };
+
+                    // メッセージの最初の行のみを表示し、改行で分割
+                    var firstLine = log.Message.Split('\n')[0];
+                    if (firstLine.Length > 100)
+                    {
+                        firstLine = firstLine.Substring(0, 100) + "...";
+                    }
+
+                    summary.AppendLine($"{icon} **[{log.Type}]** {firstLine}");
+                    
+                    // 長いメッセージの場合は省略表示
+                    if (log.Message.Length > firstLine.Length || log.Message.Contains('\n'))
+                    {
+                        summary.AppendLine($"   詳細: {log.Message.Length}文字のメッセージ");
+                    }
+                    summary.AppendLine();
+                }
+            }
+            else
+            {
+                summary.AppendLine("**ログはありません。**");
+            }
+
+            return new
             {
                 Success = true,
+                FormattedOutput = summary.ToString(),
                 TotalLogsInConsole = totalCount,
                 RetrievedLogs = logs.Count,
-                Summary = new LogSummary
+                Summary = new
                 {
                     Errors = errorCount,
                     Warnings = warningCount,

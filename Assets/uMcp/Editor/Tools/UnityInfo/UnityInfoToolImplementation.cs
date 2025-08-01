@@ -16,29 +16,63 @@ namespace uMCP.Editor.Tools
     internal sealed class UnityInfoToolImplementation
     {
         /// <summary>Unity エディターとプロジェクトの情報を取得</summary>
-        [McpServerTool, Description("Unity エディターとプロジェクトの詳細情報を取得")]
+        [McpServerTool, Description("Unity エディターとプロジェクトの詳細情報を読みやすい形式で取得")]
         public async ValueTask<object> GetUnityInfo()
         {
             await UniTask.SwitchToMainThread();
 
-            return new UnityInfoResponse
+            var info = new System.Text.StringBuilder();
+            info.AppendLine("=== Unity プロジェクト情報 ===");
+            info.AppendLine();
+
+            // プロジェクト基本情報
+            info.AppendLine("## プロジェクト詳細");
+            info.AppendLine($"**プロジェクト名:** {Application.productName}");
+            info.AppendLine($"**会社名:** {Application.companyName}");
+            info.AppendLine($"**Unity バージョン:** {Application.unityVersion}");
+            info.AppendLine($"**プラットフォーム:** {Application.platform}");
+            info.AppendLine($"**システム言語:** {Application.systemLanguage}");
+            info.AppendLine();
+
+            // エディター状態
+            info.AppendLine("## エディター状態");
+            info.AppendLine($"**実行状態:** {(Application.isPlaying ? "Play Mode" : "Edit Mode")}");
+            info.AppendLine($"**フォーカス状態:** {(Application.isFocused ? "フォーカス中" : "非フォーカス")}");
+            info.AppendLine($"**バッチモード:** {(Application.isBatchMode ? "有効" : "無効")}");
+            info.AppendLine();
+
+            // パス情報
+            info.AppendLine("## パス情報");
+            info.AppendLine($"**アセットパス:** {Application.dataPath}");
+            info.AppendLine($"**永続データパス:** {Application.persistentDataPath}");
+            info.AppendLine($"**ストリーミングアセットパス:** {Application.streamingAssetsPath}");
+            info.AppendLine();
+
+            // クラウド情報
+            if (!string.IsNullOrEmpty(Application.cloudProjectId))
             {
+                info.AppendLine("## Unity Cloud");
+                info.AppendLine($"**プロジェクトID:** {Application.cloudProjectId}");
+                info.AppendLine();
+            }
+
+            // システム情報
+            info.AppendLine("## システム情報");
+            info.AppendLine($"**OS:** {SystemInfo.operatingSystem}");
+            info.AppendLine($"**CPU:** {SystemInfo.processorType} ({SystemInfo.processorCount} cores)");
+            info.AppendLine($"**メモリ:** {SystemInfo.systemMemorySize} MB");
+            info.AppendLine($"**GPU:** {SystemInfo.graphicsDeviceName}");
+            info.AppendLine($"**GPU メモリ:** {SystemInfo.graphicsMemorySize} MB");
+
+            return new
+            {
+                Success = true,
+                FormattedOutput = info.ToString(),
                 UnityVersion = Application.unityVersion,
                 Platform = Application.platform.ToString(),
                 ProjectName = Application.productName,
-                CompanyName = Application.companyName,
-                DataPath = Application.dataPath,
-                PersistentDataPath = Application.persistentDataPath,
-                StreamingAssetsPath = Application.streamingAssetsPath,
                 IsPlaying = Application.isPlaying,
-                IsFocused = Application.isFocused,
-                SystemLanguage = Application.systemLanguage.ToString(),
-                EditorInfo = new EditorInfo
-                {
-                    IsBatchMode = Application.isBatchMode,
-                    BuildGuid = Application.buildGUID,
-                    CloudProjectId = Application.cloudProjectId
-                }
+                Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
         }
 

@@ -97,3 +97,9 @@ Desktop.ini
 
 # NuGet Packages (Unity-specific)
 /[Aa]ssets/[Pp]ackages/
+
+# Serena cache directory (keep memories and project.yml)
+.serena/cache/
+
+# claude local settings
+.claude/settings.local.json

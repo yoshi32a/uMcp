@@ -26,12 +26,23 @@ namespace uMCP.Editor.Tools
             
             var duration = (System.DateTime.Now - startTime).TotalMilliseconds;
 
-            return new AssetOperationResponse
+            var info = new System.Text.StringBuilder();
+            info.AppendLine("=== アセットデータベース更新 ===");
+            info.AppendLine($"**実行時刻:** {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine($"**処理時間:** {duration:F2}ms");
+            info.AppendLine();
+            info.AppendLine("## ✅ 実行結果");
+            info.AppendLine("📁 **アセットデータベースの更新が完了しました**");
+            info.AppendLine();
+            info.AppendLine("## 💡 効果");
+            info.AppendLine("- 新しく追加されたファイルをUnityが認識");
+            info.AppendLine("- 変更されたアセットのメタデータを更新");
+            info.AppendLine("- インポート設定の変更を反映");
+
+            return new
             {
                 Success = true,
-                Message = "Asset database refreshed successfully",
-                DurationMs = duration,
-                Timestamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                FormattedOutput = info.ToString()
             };
         }
 
@@ -45,12 +56,24 @@ namespace uMCP.Editor.Tools
             AssetDatabase.SaveAssets();
             var duration = (System.DateTime.Now - startTime).TotalMilliseconds;
 
-            return new AssetOperationResponse
+            var info = new System.Text.StringBuilder();
+            info.AppendLine("=== プロジェクト保存 ===");
+            info.AppendLine($"**実行時刻:** {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine($"**処理時間:** {duration:F2}ms");
+            info.AppendLine();
+            info.AppendLine("## ✅ 実行結果");
+            info.AppendLine("💾 **プロジェクトとアセットの保存が完了しました**");
+            info.AppendLine();
+            info.AppendLine("## 💡 保存内容");
+            info.AppendLine("- シーンの変更内容");
+            info.AppendLine("- アセット設定の変更");
+            info.AppendLine("- プロジェクト設定");
+            info.AppendLine("- プレハブの変更");
+
+            return new
             {
                 Success = true,
-                Message = "Project saved successfully",
-                DurationMs = duration,
-                Timestamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                FormattedOutput = info.ToString()
             };
         }
 
@@ -143,19 +166,12 @@ namespace uMCP.Editor.Tools
             return new
             {
                 Success = true,
-                FormattedOutput = summary.ToString(),
-                SearchFilter = filter,
-                SearchFolder = folder,
-                TotalFound = guids.Length,
-                ReturnedCount = results.Length,
-                ProjectAssets = projectAssets.Count,
-                PackageAssets = packageAssets.Count,
-                Results = results
+                FormattedOutput = summary.ToString()
             };
         }
 
         /// <summary>アセットの詳細情報を取得</summary>
-        [McpServerTool, Description("指定したパスのアセットの詳細情報を取得")]
+        [McpServerTool, Description("指定したパスのアセットの詳細情報を読みやすい形式で取得")]
         public async ValueTask<object> GetAssetInfo([Description("アセットのパス")] string assetPath)
         {
             await UniTask.SwitchToMainThread();
@@ -183,22 +199,72 @@ namespace uMCP.Editor.Tools
             var importer = AssetImporter.GetAtPath(assetPath);
             var dependencies = AssetDatabase.GetDependencies(assetPath, false);
 
-            return new AssetInfoResponse
+            var info = new System.Text.StringBuilder();
+            info.AppendLine($"=== アセット詳細: {asset.name} ===");
+            info.AppendLine($"**パス:** {assetPath}");
+            info.AppendLine($"**GUID:** {guid}");
+            info.AppendLine();
+
+            // 基本情報
+            info.AppendLine("## 📋 基本情報");
+            var icon = asset.GetType().Name switch
+            {
+                "SceneAsset" => "🎬",
+                "GameObject" => "🎮", 
+                "Material" => "🎨",
+                "Texture2D" => "🖼️",
+                "AudioClip" => "🔊",
+                "MonoScript" => "📜",
+                "Shader" => "✨",
+                "Mesh" => "📐",
+                _ => "📄"
+            };
+            
+            info.AppendLine($"{icon} **{asset.name}** ({asset.GetType().Name})");
+            info.AppendLine($"**サイズ:** {FormatFileSize(File.Exists(assetPath) ? new FileInfo(assetPath).Length : 0)}");
+            info.AppendLine($"**最終更新:** {(File.Exists(assetPath) ? File.GetLastWriteTime(assetPath).ToString("yyyy-MM-dd HH:mm:ss") : "不明")}");
+            info.AppendLine($"**インポーター:** {(importer ? importer.GetType().Name : "なし")}");
+            info.AppendLine();
+
+            // ラベル
+            var labels = AssetDatabase.GetLabels(asset);
+            if (labels.Length > 0)
+            {
+                info.AppendLine("## 🏷️ ラベル");
+                foreach (var label in labels)
+                {
+                    info.AppendLine($"- {label}");
+                }
+                info.AppendLine();
+            }
+
+            // 依存関係
+            if (dependencies.Length > 0)
+            {
+                info.AppendLine($"## 🔗 依存関係 ({dependencies.Length}件)");
+                foreach (var dep in dependencies.Take(10))
+                {
+                    var depAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(dep);
+                    var depIcon = depAsset?.GetType().Name switch
+                    {
+                        "Material" => "🎨",
+                        "Texture2D" => "🖼️",
+                        "MonoScript" => "📜",
+                        "Shader" => "✨",
+                        _ => "📄"
+                    };
+                    info.AppendLine($"{depIcon} **{Path.GetFileNameWithoutExtension(dep)}** - {dep}");
+                }
+                if (dependencies.Length > 10)
+                {
+                    info.AppendLine($"   ...他 {dependencies.Length - 10}件");
+                }
+            }
+
+            return new
             {
                 Success = true,
-                AssetInfo = new AssetInfo
-                {
-                    Name = asset.name,
-                    Path = assetPath,
-                    Guid = guid,
-                    Type = asset.GetType().Name,
-                    SizeBytes = File.Exists(assetPath) ? new FileInfo(assetPath).Length : 0,
-                    LastModified = File.Exists(assetPath) ? File.GetLastWriteTime(assetPath).ToString("yyyy-MM-dd HH:mm:ss") : "Unknown",
-                    ImporterType = importer ? importer.GetType().Name : "None",
-                    Labels = AssetDatabase.GetLabels(asset),
-                    Dependencies = dependencies,
-                    DependencyCount = dependencies.Length
-                }
+                FormattedOutput = info.ToString()
             };
         }
 
@@ -230,13 +296,58 @@ namespace uMCP.Editor.Tools
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
             var duration = (System.DateTime.Now - startTime).TotalMilliseconds;
 
-            return new AssetOperationResponse
+            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
+            var info = new System.Text.StringBuilder();
+            info.AppendLine($"=== アセット再インポート: {(asset ? asset.name : Path.GetFileNameWithoutExtension(assetPath))} ===");
+            info.AppendLine($"**パス:** {assetPath}");
+            info.AppendLine($"**実行時刻:** {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine($"**処理時間:** {duration:F2}ms");
+            info.AppendLine();
+            
+            var icon = asset?.GetType().Name switch
+            {
+                "SceneAsset" => "🎬",
+                "Material" => "🎨",
+                "Texture2D" => "🖼️",
+                "AudioClip" => "🔊",
+                "MonoScript" => "📜",
+                "Shader" => "✨",
+                "Mesh" => "📐",
+                _ => "📄"
+            };
+            
+            info.AppendLine("## ✅ 実行結果");
+            info.AppendLine($"{icon} **アセットの再インポートが正常に完了しました**");
+            info.AppendLine();
+            info.AppendLine("## 💡 効果");
+            info.AppendLine("- インポート設定の強制再適用");
+            info.AppendLine("- メタデータの再生成");
+            info.AppendLine("- 依存関係の再構築");
+            info.AppendLine("- キャッシュのクリア");
+
+            return new
             {
                 Success = true,
-                Message = $"Asset reimported successfully: {assetPath}",
-                DurationMs = duration,
-                Timestamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                FormattedOutput = info.ToString()
             };
+        }
+
+        /// <summary>ファイルサイズを読みやすい形式にフォーマット</summary>
+        string FormatFileSize(long bytes)
+        {
+            if (bytes == 0) return "0 B";
+            
+            var units = new[] { "B", "KB", "MB", "GB" };
+            var unitIndex = 0;
+            var size = (double)bytes;
+            
+            while (size >= 1024 && unitIndex < units.Length - 1)
+            {
+                size /= 1024;
+                unitIndex++;
+            }
+            
+            return $"{size:F1} {units[unitIndex]}";
         }
     }
 }

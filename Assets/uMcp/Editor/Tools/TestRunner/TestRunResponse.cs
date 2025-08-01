@@ -23,5 +23,8 @@ namespace uMCP.Editor.Tools
         [JsonPropertyName("end_time")] public string EndTime { get; set; }
 
         [JsonPropertyName("overall_result")] public string OverallResult { get; set; }
+        
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string FormattedOutput { get; set; }
     }
 }

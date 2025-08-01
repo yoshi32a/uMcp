@@ -91,6 +91,76 @@ namespace uMCP.Editor.Tools
                 : 0;
             currentResult.OverallResult = currentResult.Summary.FailedTests == 0 ? "PASSED" : "FAILED";
 
+            // FormattedOutputを生成
+            var info = new System.Text.StringBuilder();
+            var modeIcon = currentResult.TestMode switch
+            {
+                "EditMode" => "🔧",
+                "PlayMode" => "▶️",
+                _ => "📋"
+            };
+            
+            info.AppendLine($"=== {modeIcon} {currentResult.TestMode}テスト実行結果 ===");
+            info.AppendLine($"**実行時刻:** {currentResult.StartTime} - {currentResult.EndTime}");
+            info.AppendLine($"**実行時間:** {duration.TotalSeconds:F2}秒");
+            if (timeoutSeconds > 0)
+            {
+                info.AppendLine($"**タイムアウト:** {timeoutSeconds}秒");
+            }
+            info.AppendLine();
+            
+            // 結果サマリー
+            var resultIcon = currentResult.OverallResult == "PASSED" ? "✅" : "❌";
+            info.AppendLine($"## {resultIcon} 結果: {currentResult.OverallResult}");
+            info.AppendLine($"📋 **総テスト数:** {currentResult.Summary.TotalTests}件");
+            info.AppendLine($"✅ **成功:** {currentResult.Summary.PassedTests}件");
+            if (currentResult.Summary.FailedTests > 0)
+            {
+                info.AppendLine($"❌ **失敗:** {currentResult.Summary.FailedTests}件");
+            }
+            if (currentResult.Summary.SkippedTests > 0)
+            {
+                info.AppendLine($"⏭️ **スキップ:** {currentResult.Summary.SkippedTests}件");
+            }
+            info.AppendLine($"📈 **成功率:** {currentResult.Summary.SuccessRate:F1}%");
+            info.AppendLine();
+            
+            // 失敗テスト詳細
+            if (currentResult.FailedTests?.Count > 0)
+            {
+                info.AppendLine("## ❌ 失敗テスト詳細");
+                foreach (var failed in currentResult.FailedTests)
+                {
+                    info.AppendLine($"### {failed.Name}");
+                    info.AppendLine($"**メッセージ:** {failed.Message}");
+                    if (!string.IsNullOrEmpty(failed.StackTrace))
+                    {
+                        info.AppendLine($"**スタックトレース:**");
+                        info.AppendLine("```");
+                        info.AppendLine(failed.StackTrace);
+                        info.AppendLine("```");
+                    }
+                    info.AppendLine();
+                }
+            }
+            
+            // 推奨アクション
+            if (currentResult.Summary.FailedTests > 0)
+            {
+                info.AppendLine("## 💡 推奨アクション");
+                info.AppendLine("- 失敗テストのコードを確認して修正");
+                info.AppendLine("- `get_console_logs`でエラー詳細を確認");
+                info.AppendLine("- 依存関係やセットアップを確認");
+            }
+            else if (currentResult.Summary.TotalTests > 0)
+            {
+                info.AppendLine("## 🎉 おめでとうございます！");
+                info.AppendLine("すべてのテストが成功しました。コードの品質が保たれています。");
+            }
+            
+            // FormattedOutputを追加
+            currentResult.FormattedOutput = info.ToString();
+
             Debug.Log($"[uMCP TestResultCollector] Test run finished: {currentResult.OverallResult} " +
                       $"({currentResult.Summary.PassedTests}/{currentResult.Summary.TotalTests} passed)");
 

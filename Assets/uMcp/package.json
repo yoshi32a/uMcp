@@ -2,7 +2,7 @@
   "name": "com.umcp.unity-mcp-server",
   "version": "1.0.0",
   "displayName": "Unity MCP Server",
-  "description": "A Model Context Protocol (MCP) server implementation for Unity Editor, enabling AI assistants to interact with Unity projects in real-time. Provides tools for asset management, console logs, test execution, and project analysis. Requires UniTask.",
+  "description": "A Model Context Protocol (MCP) server implementation for Unity Editor, enabling AI assistants to interact with Unity projects in real-time. Features 21 built-in tools, Markdown-based workflow system, and intelligent action suggestions. Supports asset management, console logs, test execution, project analysis, and context-aware workflow guidance. Requires UniTask.",
   "unity": "2022.3",
   "documentationUrl": "https://github.com/yoshi32a/uMcp",
   "changelogUrl": "https://github.com/yoshi32a/uMcp/blob/master/CHANGELOG.md",
@@ -15,7 +15,9 @@
     "automation",
     "editor",
     "tools",
-    "development"
+    "development",
+    "workflow",
+    "markdown"
   ],
   "author": {
     "name": "yoshi32a",

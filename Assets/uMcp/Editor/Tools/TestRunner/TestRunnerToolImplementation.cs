@@ -185,11 +185,7 @@ namespace uMCP.Editor.Tools
                 return new
                 {
                     Success = true,
-                    FormattedOutput = summary.ToString(),
-                    RequestedMode = testMode,
-                    TotalTests = totalTests,
-                    Tests = testModeInfos,
-                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    FormattedOutput = summary.ToString()
                 };
             }
             finally

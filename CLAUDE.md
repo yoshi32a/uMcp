@@ -67,29 +67,39 @@ internal sealed class MyToolImplementation
 
 ## MCPサーバー機能
 
-### ビルトインツールセット（全17ツール）
+### ビルトインツールセット（全21ツール）
 
-#### Unity情報ツール
+#### Unity情報ツール（5ツール）
 - **get_unity_info**: Unity エディターとプロジェクトの詳細情報
 - **get_scene_info**: 現在のシーン構造とGameObject分析
+- **get_hierarchy_analysis**: 指定GameObjectとその子階層の構造を詳細分析
+- **get_game_object_info**: 指定GameObjectの詳細情報を取得
+- **get_prefab_info**: 指定Prefabの詳細情報を取得
 
-#### アセット管理ツール  
+#### アセット管理ツール（5ツール）
 - **refresh_assets**: アセットデータベースのリフレッシュ
 - **save_project**: プロジェクトとアセットの保存
 - **find_assets**: フィルターによるアセット検索
 - **get_asset_info**: アセットの詳細情報取得
 - **reimport_asset**: 指定アセットの強制再インポート
 
-#### コンソールログツール
-- **get_console_logs**: Unity コンソールログの取得とフィルタリング
+#### コンソールログツール（4ツール）
+- **get_console_logs**: Unity コンソールログの取得とフィルタリング（errorsOnlyバグ修正済み）
 - **clear_console_logs**: コンソールログの全クリア
 - **log_to_console**: カスタムメッセージのコンソール出力
 - **get_log_statistics**: ログ統計情報の取得
 
-#### テスト実行ツール（高度なPlayMode最適化搭載）
+#### テスト実行ツール（3ツール・高度なPlayMode最適化搭載）
 - **run_edit_mode_tests**: EditModeテストの実行と結果取得（標準実行）
 - **run_play_mode_tests**: PlayModeテストの高速実行（ドメインリロード制御付き）
 - **get_available_tests**: 利用可能なテスト一覧の取得（モード別フィルタリング対応）
+
+#### エディタ拡張ツール（1ツール）
+- **execute_editor_method**: コンパイル済みエディタ拡張の静的メソッドを実行
+
+#### ワークフロー提案ツール（2ツール・NEW!）
+- **get_next_action_suggestions**: 現在の状態から推奨される次のMCPツール実行を提案
+- **get_workflow_patterns**: Markdownファイルから読み込んだワークフローパターンを取得
 
 **PlayModeテスト技術実装:**
 - `EditorSettings.enterPlayModeOptionsEnabled`と`EnterPlayModeOptions`の制御
@@ -97,6 +107,19 @@ internal sealed class MyToolImplementation
 - テスト実行前後での設定の保存・復元パターン
 - `finally`ブロックでの確実な設定リストア
 - コンパイル状態とPlay Mode状態の事前チェック
+
+### Markdownワークフローシステム（NEW!）
+**コンテキスト対応のインテリジェントワークフロー提案**
+- **Markdownベース定義**: 開発者が簡単に編集可能な`.md`ファイルでワークフロー定義
+- **動的提案システム**: 実行したツールと作業コンテキストに基づく次アクション提案
+- **4つの組み込みワークフロー**: エディタ拡張開発、エラー調査、テスト実行、アセット管理
+- **トリガーシステム**: ツール実行後の自動推奨とキーワードベースマッチング
+- **パラメータ付き実行**: 各ステップに最適なパラメータを自動設定
+
+**実装技術:**
+- `WorkflowMarkdownParser`: .mdファイルの構造化パース
+- `ToolWorkflowSuggestionImplementation`: コンテキスト分析とマッチング
+- `Assets/uMcp/Workflows/`: Markdownワークフロー定義ディレクトリ
 
 ### 高度な通信機能
 - **JSON-RPC 2.0準拠**: 完全なMCPプロトコル実装
@@ -124,12 +147,18 @@ Assets/uMcp/
 │   │   └── UMcpToolBuilder.cs   # ツール基底クラス
 │   ├── Settings/
 │   │   └── UMcpSettings.cs      # 設定管理
-│   ├── Tools/                   # ビルトインツール実装
-│   │   ├── UnityInfoTool.cs
-│   │   ├── AssetManagementTool.cs
-│   │   ├── ConsoleLogTool.cs
-│   │   └── TestRunnerTool.cs
+│   ├── Tools/                   # ビルトインツール実装（21ツール）
+│   │   ├── UnityInfo/           # Unity情報ツール（5ツール）
+│   │   ├── AssetManagement/     # アセット管理ツール（5ツール）
+│   │   ├── ConsoleLog/          # コンソールログツール（4ツール）
+│   │   ├── TestRunner/          # テスト実行ツール（3ツール）
+│   │   ├── EditorExtension/     # エディタ拡張ツール（1ツール）
+│   │   └── ToolWorkflow/        # ワークフロー提案ツール（2ツール・NEW!）
 │   └── Attributes/              # カスタム属性
+├── Workflows/                   # Markdownワークフロー定義（NEW!）
+│   ├── editor-extension-workflow.md
+│   ├── error-investigation-workflow.md
+│   └── workflow-triggers.md
 └── Samples~/                    # サンプルコード（オプション）
     └── BasicTools/
 ```

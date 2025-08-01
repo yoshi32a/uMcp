@@ -12,7 +12,7 @@ namespace uMCP.Editor.Tools
     internal sealed class ToolWorkflowSuggestionImplementation
     {
         /// <summary>現在のコンテキストから次の推奨アクションを提案</summary>
-        [McpServerTool, Description("現在の状態から推奨される次のMCPツール実行を提案")]
+        [McpServerTool, Description("現在の状態から推奨される次のMCPツール実行を読みやすい形式で提案")]
         public async ValueTask<object> GetNextActionSuggestions(
             [Description("直前に実行したツール名")] string lastExecutedTool = "",
             [Description("現在の作業コンテキスト")] string workContext = "")
@@ -76,14 +76,86 @@ namespace uMCP.Editor.Tools
             // 一般的な推奨事項を追加
             AddGeneralSuggestions(suggestions, lastExecutedTool);
 
+            // 優先度順にソート
+            var sortedSuggestions = suggestions.OrderByDescending(s => GetPriorityValue(s.Priority)).ToList();
+
+            // 読みやすい形式のサマリーを作成
+            var summary = new System.Text.StringBuilder();
+            summary.AppendLine("=== 推奨アクション一覧 ===");
+            summary.AppendLine($"**前回実行ツール:** {(string.IsNullOrEmpty(lastExecutedTool) ? "なし" : lastExecutedTool)}");
+            summary.AppendLine($"**作業コンテキスト:** {(string.IsNullOrEmpty(workContext) ? "一般的な作業" : workContext)}");
+            summary.AppendLine();
+
+            if (sortedSuggestions.Count > 0)
+            {
+                // 優先度別グループ化
+                var highPriority = sortedSuggestions.Where(s => s.Priority == "high").ToList();
+                var mediumPriority = sortedSuggestions.Where(s => s.Priority == "medium").ToList(); 
+                var lowPriority = sortedSuggestions.Where(s => s.Priority == "low").ToList();
+
+                if (highPriority.Count > 0)
+                {
+                    summary.AppendLine("## 🔥 高優先度の推奨アクション");
+                    foreach (var suggestion in highPriority)
+                    {
+                        summary.AppendLine($"- **{suggestion.Tool}** - {suggestion.Reason}");
+                        if (!string.IsNullOrEmpty(suggestion.WorkflowName))
+                        {
+                            summary.AppendLine($"  関連ワークフロー: {suggestion.WorkflowName}");
+                        }
+                    }
+                    summary.AppendLine();
+                }
+
+                if (mediumPriority.Count > 0)
+                {
+                    summary.AppendLine("## ⚡ 中優先度の推奨アクション");
+                    foreach (var suggestion in mediumPriority)
+                    {
+                        summary.AppendLine($"- **{suggestion.Tool}** - {suggestion.Reason}");
+                        if (!string.IsNullOrEmpty(suggestion.WorkflowName))
+                        {
+                            summary.AppendLine($"  関連ワークフロー: {suggestion.WorkflowName}");
+                        }
+                    }
+                    summary.AppendLine();
+                }
+
+                if (lowPriority.Count > 0)
+                {
+                    summary.AppendLine("## 💡 低優先度の推奨アクション");
+                    foreach (var suggestion in lowPriority)
+                    {
+                        summary.AppendLine($"- **{suggestion.Tool}** - {suggestion.Reason}");
+                        if (!string.IsNullOrEmpty(suggestion.WorkflowName))
+                        {
+                            summary.AppendLine($"  関連ワークフロー: {suggestion.WorkflowName}");
+                        }
+                    }
+                    summary.AppendLine();
+                }
+
+                // 次のステップガイダンス
+                summary.AppendLine("## 📋 次のステップ");
+                var topSuggestion = sortedSuggestions.First();
+                summary.AppendLine($"**最初に実行すべき:** `{topSuggestion.Tool}`");
+                summary.AppendLine($"**理由:** {topSuggestion.Reason}");
+                if (topSuggestion.Parameters != null && HasParameters(topSuggestion.Parameters))
+                {
+                    summary.AppendLine($"**推奨パラメータ:** {System.Text.Json.JsonSerializer.Serialize(topSuggestion.Parameters, new System.Text.Json.JsonSerializerOptions { WriteIndented = false, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })}");
+                }
+            }
+            else
+            {
+                summary.AppendLine("**推奨アクションはありません。**");
+                summary.AppendLine("現在の状況では特定の次ステップは提案されていません。");
+                summary.AppendLine("一般的な作業として `get_unity_info` や `get_scene_info` から始めることをお勧めします。");
+            }
+
             return new
             {
                 Success = true,
-                LastTool = lastExecutedTool ?? "none",
-                Context = workContext ?? "general",
-                Suggestions = suggestions.OrderByDescending(s => GetPriorityValue(s.Priority)).ToList(),
-                TotalSuggestions = suggestions.Count,
-                Source = "Markdown-based workflow system"
+                FormattedOutput = summary.ToString()
             };
         }
 
@@ -112,6 +184,20 @@ namespace uMCP.Editor.Tools
                     Priority = "low"
                 });
             }
+        }
+
+        /// <summary>パラメータが存在するかチェック</summary>
+        bool HasParameters(object parameters)
+        {
+            if (parameters == null) return false;
+            
+            if (parameters is System.Collections.IDictionary dict)
+                return dict.Count > 0;
+            
+            if (parameters is System.Collections.ICollection collection)
+                return collection.Count > 0;
+                
+            return !string.IsNullOrEmpty(parameters.ToString());
         }
 
         /// <summary>優先度を数値に変換</summary>
@@ -165,7 +251,7 @@ namespace uMCP.Editor.Tools
                         var step = workflow.Steps[i];
                         result.AppendLine($"{i + 1}. **{step.ToolName}** - {step.Description}");
                         
-                        if (step.Parameters != null && step.Parameters.Count > 0)
+                        if (step.Parameters != null && HasParameters(step.Parameters))
                         {
                             result.AppendLine($"   パラメータ: {System.Text.Json.JsonSerializer.Serialize(step.Parameters, new System.Text.Json.JsonSerializerOptions { WriteIndented = false, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })}");
                         }
@@ -179,11 +265,7 @@ namespace uMCP.Editor.Tools
             return new
             {
                 Success = true,
-                FormattedOutput = result.ToString(),
-                TotalPatterns = validWorkflows.Count,
-                AllFiles = workflows.Count,
-                WorkflowDirectory = WorkflowMarkdownParser.WorkflowDirectory,
-                Message = $"{validWorkflows.Count}個の有効なワークフローパターンを読み込みました（全{workflows.Count}ファイル中）"
+                FormattedOutput = result.ToString()
             };
         }
     }

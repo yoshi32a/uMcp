@@ -147,16 +147,7 @@ namespace uMCP.Editor.Tools
             return new
             {
                 Success = true,
-                FormattedOutput = summary.ToString(),
-                TotalLogsInConsole = totalCount,
-                RetrievedLogs = logs.Count,
-                Summary = new
-                {
-                    Errors = errorCount,
-                    Warnings = warningCount,
-                    Info = infoCount
-                },
-                Logs = logs
+                FormattedOutput = summary.ToString()
             };
         }
 
@@ -179,11 +170,23 @@ namespace uMCP.Editor.Tools
             {
                 clearMethod.Invoke(null, null);
 
-                return new ClearConsoleResponse
+                var info = new System.Text.StringBuilder();
+                info.AppendLine("=== コンソールログクリア ===");
+                info.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                info.AppendLine();
+                info.AppendLine("## ✅ 実行結果");
+                info.AppendLine("🧹 **コンソールログをすべてクリアしました**");
+                info.AppendLine();
+                info.AppendLine("## 💡 効果"); 
+                info.AppendLine("- エラーログのクリア");
+                info.AppendLine("- 警告ログのクリア");
+                info.AppendLine("- 情報ログのクリア");
+                info.AppendLine("- コンソールの表示がリセットされました");
+                
+                return new
                 {
                     Success = true,
-                    Message = "Console logs cleared successfully",
-                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    FormattedOutput = info.ToString()
                 };
             }
             catch (Exception ex)
@@ -223,17 +226,39 @@ namespace uMCP.Editor.Tools
                     break;
             }
 
-            return new LogToConsoleResponse
+            var info = new System.Text.StringBuilder();
+            info.AppendLine($"=== コンソールログ出力: {logType.ToUpper()} ===");
+            info.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine();
+            
+            var icon = logType.ToLower() switch
+            {
+                "error" => "❌",
+                "warning" => "⚠️",
+                _ => "ℹ️"
+            };
+            
+            info.AppendLine("## ✅ 実行結果");
+            info.AppendLine($"{icon} **メッセージをUnityコンソールに出力しました**");
+            info.AppendLine();
+            info.AppendLine("## 💬 出力内容");
+            info.AppendLine($"**タイプ:** {logType}");
+            info.AppendLine($"**メッセージ:** {message}");
+            if (!string.IsNullOrEmpty(context))
+            {
+                info.AppendLine($"**コンテキスト:** {context}");
+            }
+            info.AppendLine($"**完全メッセージ:** {fullMessage}");
+            
+            return new
             {
                 Success = true,
-                Message = $"Logged {logType}: {message}",
-                FullMessage = fullMessage,
-                Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                FormattedOutput = info.ToString()
             };
         }
 
         /// <summary>コンソールログの統計情報を取得</summary>
-        [McpServerTool, Description("現在のコンソールログの統計情報を取得")]
+        [McpServerTool, Description("現在のコンソールログの統計情報を読みやすい形式で取得")]
         public async ValueTask<object> GetLogStatistics()
         {
             await UniTask.SwitchToMainThread();
@@ -275,20 +300,54 @@ namespace uMCP.Editor.Tools
                     }
                 }
 
-                return new LogStatisticsResponse
+                var info = new System.Text.StringBuilder();
+                info.AppendLine("=== コンソールログ統計 ===");
+                info.AppendLine($"**分析時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                info.AppendLine($"**総ログ数:** {totalCount}件");
+                info.AppendLine($"**サンプルサイズ:** {sampleSize}件（最新{sampleSize}件を分析）");
+                info.AppendLine();
+
+                // 統計情報
+                info.AppendLine("## 📊 ログ種別統計");
+                info.AppendLine($"❌ **エラー:** {errorCount}件 ({(sampleSize > 0 ? errorCount * 100.0 / sampleSize : 0):F1}%)");
+                info.AppendLine($"⚠️ **警告:** {warningCount}件 ({(sampleSize > 0 ? warningCount * 100.0 / sampleSize : 0):F1}%)"); 
+                info.AppendLine($"ℹ️ **情報:** {infoCount}件 ({(sampleSize > 0 ? infoCount * 100.0 / sampleSize : 0):F1}%)");
+                info.AppendLine();
+
+                // 健全性評価
+                info.AppendLine("## 🔍 ログ健全性評価");
+                if (errorCount == 0 && warningCount == 0)
+                {
+                    info.AppendLine("✅ **優良**: エラーや警告がありません");
+                }
+                else if (errorCount == 0 && warningCount > 0)
+                {
+                    info.AppendLine("⚠️ **注意**: 警告があります（エラーなし）");
+                }
+                else if (errorCount > 0)
+                {
+                    info.AppendLine("❌ **要対応**: エラーが発生しています");
+                }
+
+                // 推奨アクション
+                if (errorCount > 0 || warningCount > 0)
+                {
+                    info.AppendLine();
+                    info.AppendLine("## 💡 推奨アクション");
+                    if (errorCount > 0)
+                    {
+                        info.AppendLine("- `get_console_logs errorsOnly=true` でエラー詳細を確認");
+                    }
+                    if (warningCount > 0)
+                    {
+                        info.AppendLine("- `get_console_logs includeWarnings=true` で警告を確認");
+                    }
+                }
+
+                return new
                 {
                     Success = true,
-                    TotalLogs = totalCount,
-                    SampleSize = sampleSize,
-                    Statistics = new StatisticsSummary
-                    {
-                        Errors = errorCount,
-                        Warnings = warningCount,
-                        Info = infoCount,
-                        ErrorPercentage = totalCount > 0 ? errorCount * 100.0 / sampleSize : 0,
-                        WarningPercentage = totalCount > 0 ? warningCount * 100.0 / sampleSize : 0
-                    },
-                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    FormattedOutput = info.ToString()
                 };
             }
             catch (Exception ex)

@@ -138,6 +138,44 @@ namespace uMCP.Editor.Tools
                     }
                 }
 
+                // FormattedOutputを生成
+                var info = new System.Text.StringBuilder();
+                info.AppendLine($"=== エディターメソッド実行: {methodName} ===");
+                info.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                info.AppendLine($"**クラス:** {className}");
+                info.AppendLine($"**メソッド:** {methodName}");
+                info.AppendLine($"**メソッドタイプ:** {(method.IsStatic ? "静的メソッド" : "インスタンスメソッド")}");
+                info.AppendLine();
+                
+                info.AppendLine("## ✅ 実行結果");
+                info.AppendLine("⚙️ **メソッドの実行が正常に完了しました**");
+                info.AppendLine();
+                
+                // パラメータ情報
+                if (methodParams.Length > 0)
+                {
+                    info.AppendLine("## 🔧 使用されたパラメータ");
+                    for (int i = 0; i < methodParams.Length; i++)
+                    {
+                        var param = methodParams[i];
+                        info.AppendLine($"- **{param.Name}** ({param.ParameterType.Name}): {args[i] ?? "null"}");
+                    }
+                    info.AppendLine();
+                }
+                
+                // 戻り値
+                if (result != null)
+                {
+                    info.AppendLine("## 📝 戻り値");
+                    info.AppendLine($"**型:** {result.GetType().Name}");
+                    info.AppendLine($"**値:** {result}");
+                }
+                else
+                {
+                    info.AppendLine("## 📝 戻り値");
+                    info.AppendLine("void (戻り値なし)");
+                }
+                
                 return new
                 {
                     success = true,
@@ -153,16 +191,50 @@ namespace uMCP.Editor.Tools
                             type = p.ParameterType.Name,
                             value = args[i] 
                         }).ToArray()
-                    }
+                    },
+                    FormattedOutput = info.ToString()
                 };
             }
             catch (Exception ex)
             {
+                // エラー時のFormattedOutputを生成
+                var errorInfo = new System.Text.StringBuilder();
+                errorInfo.AppendLine($"=== エディターメソッド実行エラー: {methodName} ===");
+                errorInfo.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                errorInfo.AppendLine($"**クラス:** {className}");
+                errorInfo.AppendLine($"**メソッド:** {methodName}");
+                errorInfo.AppendLine();
+                
+                errorInfo.AppendLine("## ❌ エラー詳細");
+                errorInfo.AppendLine($"**エラーメッセージ:** {ex.Message}");
+                
+                if (ex.InnerException != null)
+                {
+                    errorInfo.AppendLine($"**内部エラー:** {ex.InnerException.Message}");
+                }
+                
+                if (!string.IsNullOrEmpty(ex.StackTrace))
+                {
+                    errorInfo.AppendLine();
+                    errorInfo.AppendLine("**スタックトレース:**");
+                    errorInfo.AppendLine("```");
+                    errorInfo.AppendLine(ex.StackTrace);
+                    errorInfo.AppendLine("```");
+                }
+                
+                errorInfo.AppendLine();
+                errorInfo.AppendLine("## 💡 推奨アクション");
+                errorInfo.AppendLine("- メソッド名とパラメータを確認");
+                errorInfo.AppendLine("- クラスがコンパイルされているか確認");
+                errorInfo.AppendLine("- アセンブリのロード状態を確認");
+                errorInfo.AppendLine("- `get_console_logs`でコンパイルエラーを確認");
+                
                 return new { 
                     success = false, 
                     error = ex.Message, 
                     stackTrace = ex.StackTrace,
-                    innerException = ex.InnerException?.Message 
+                    innerException = ex.InnerException?.Message,
+                    FormattedOutput = errorInfo.ToString()
                 };
             }
         }

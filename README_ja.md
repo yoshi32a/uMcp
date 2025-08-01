@@ -1,6 +1,6 @@
 # Unity MCP Server
 
-Unity EditorとAIアシスタントがリアルタイムで連携できる、強力なModel Context Protocol (MCP) サーバー実装です。
+Unity EditorとAIアシスタントがリアルタイムでインテリジェントに連携できる、強力なModel Context Protocol (MCP) サーバー実装です。
 
 ## 特徴
 
@@ -10,68 +10,70 @@ Unity EditorとAIアシスタントがリアルタイムで連携できる、強
 - **リアルタイム通信**: Unity Editorとの直接統合
 - **自動起動**: Unity Editor起動時に自動開始
 
-### 🛠️ ビルトインツール群
+### 🛠️ ビルトインツール群（全21ツール）
 
-#### Unity情報ツール
+#### 🎯 Unity情報ツール（5ツール）
 - `get_unity_info` - Unity エディターとプロジェクトの詳細情報取得
 - `get_scene_info` - 現在のシーン構造分析
+- `get_hierarchy_analysis` - 指定GameObjectとその子階層の構造を詳細分析
+- `get_game_object_info` - 指定GameObjectの詳細情報を取得
+- `get_prefab_info` - 指定Prefabの詳細情報を取得
 
-#### アセット管理ツール
+#### 📁 アセット管理ツール（5ツール）
 - `refresh_assets` - Unity アセットデータベースのリフレッシュ
 - `save_project` - 現在のプロジェクトとアセットの保存
 - `find_assets` - フィルターとフォルダーによるアセット検索
 - `get_asset_info` - アセットの詳細情報取得
 - `reimport_asset` - 特定アセットの強制再インポート
 
-#### コンソールログツール
-- `get_console_logs` - フィルタリング機能付きUnity コンソールログ取得
+#### 🐛 コンソールログツール（4ツール）
+- `get_console_logs` - フィルタリング機能付きUnity コンソールログ取得（errorsOnlyバグ修正済み）
 - `clear_console_logs` - 全コンソールログのクリア
 - `log_to_console` - カスタムメッセージのコンソール出力
 - `get_log_statistics` - コンソールログ統計情報の取得
 
-#### テストランナーツール
+#### 🧪 テストランナーツール（3ツール）
 - `run_edit_mode_tests` - タイムアウト制御付きEditModeテスト実行
 - `run_play_mode_tests` - ドメインリロード制御付きPlayModeテスト実行
 - `get_available_tests` - モード別利用可能テスト一覧取得（EditMode/PlayMode/All）
 
+#### ⚙️ エディタ拡張ツール（1ツール）
+- `execute_editor_method` - コンパイル済みエディタ拡張の静的メソッドを実行
+
+#### 🧠 ワークフロー提案ツール（2ツール）**NEW!**
+- `get_next_action_suggestions` - 現在の状態から推奨される次のMCPツール実行を提案
+- `get_workflow_patterns` - Markdownファイルから読み込んだワークフローパターンを取得
+
+### 🆕 最新バージョンの新機能
+- **🧠 ワークフロー提案**: コンテキスト対応の次アクション提案
+- **📝 Markdownワークフロー**: 編集しやすいワークフロー定義
+- **🎯 スマートトリガー**: コンテキストに基づく自動ツール連携
+- **🐛 バグ修正**: `get_console_logs` errorsOnlyフィルタリング問題を解決
+
 ## 事前準備
 
-Unity MCP Serverをインストールする前に、必要な依存関係をセットアップする必要があります：
+### システム要件
+- **Unity**: 2022.3 LTS以降
+- **UniTask**: 2.3.3以降（必須依存関係）
 
-### 1. UniTaskのインストール
+### UniTaskのインストール
 1. Unity Package Managerを開く
 2. 「+」→「Add package from git URL」をクリック
 3. URL入力：`https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
 
-### 2. NuGetForUnityのインストール
-1. Unity Package Managerを開く
-2. 「+」→「Add package from git URL」をクリック
-3. URL入力：`https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
-
-### 3. System.Text.JsonのNuGet経由インストール
-1. NuGetForUnityのインストール完了後、`NuGet → Manage NuGet Packages`を選択
-2. 「System.Text.Json」を検索
-3. `System.Text.Json` バージョン `9.0.7` 以降をインストール
-
 ## インストール方法
 
-### 方法1: Package Manager（Git URL）
-1. まず[事前準備](#事前準備)を完了してください
+### Package Manager（推奨）
+1. まず[UniTaskをインストール](#unitaskのインストール)してください
 2. Unity Package Managerを開く
 3. 「+」→「Add package from git URL」をクリック
 4. URL入力：`https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp`
 
-### 方法2: 手動インストール
-1. まず[事前準備](#事前準備)を完了してください
+### 手動インストール
+1. まず[UniTaskをインストール](#unitaskのインストール)してください
 2. [GitHub Releases](https://github.com/yoshi32a/uMcp/releases)から最新リリースをダウンロード
 3. `Assets/uMcp/`フォルダーをプロジェクトの`Assets/`またはパッケージディレクトリにコピー
 4. Unityが自動的にパッケージを検出・インポート
-
-### 方法3: UnityPackageファイル
-1. まず[事前準備](#事前準備)を完了してください
-2. [Releasesページ](https://github.com/yoshi32a/uMcp/releases)から`.unitypackage`ファイルをダウンロード
-3. Unity Editorで「Assets → Import Package → Custom Package」を選択
-4. ダウンロードした`.unitypackage`ファイルを選択してインポート
 
 ## クイックスタート
 
@@ -180,7 +182,7 @@ Unity MCP Serverは、ドメインリロード最適化による高度なPlayMod
 
 ## 動作要件
 
-- **Unity**: 6000.0以降
+- **Unity**: 2022.3 LTS以降
 - **UniTask**: 2.3.3以降
 - **.NET**: Unity対応の.NET実装
 
@@ -214,13 +216,45 @@ Unity MCP Serverは、ドメインリロード最適化による高度なPlayMod
 - テストアセンブリが適切に設定されているか確認
 - テストメソッドがUnity Test Frameworkの規約に従っているか確認
 
+## Markdownワークフローシステム
+
+**コンテキスト対応のインテリジェントワークフロー提案**
+
+新機能として、Markdownファイルでワークフローを定義し、現在の作業コンテキストに基づいて次のアクションを自動提案するシステムを搭載：
+
+### 主要機能
+- **Markdownベース定義**: 開発者が簡単に編集可能な`.md`ファイルでワークフロー定義
+- **動的提案システム**: 実行したツールと作業コンテキストに基づく次アクション提案  
+- **4つの組み込みワークフロー**: エディタ拡張開発、エラー調査、テスト実行、アセット管理
+- **トリガーシステム**: ツール実行後の自動推奨とキーワードベースマッチング
+- **パラメータ付き実行**: 各ステップに最適なパラメータを自動設定
+
+### ワークフローファイル例
+```markdown
+# エディタ拡張開発ワークフロー
+
+## ステップ
+
+### 1. アセットリフレッシュ
+- tool: refresh_assets
+- 説明: 新しいスクリプトファイルを認識させる
+
+### 2. メソッド実行
+- tool: execute_editor_method
+- 説明: 作成したメソッドを実行
+```
+
 ## アーキテクチャ
 
 ```
 Assets/uMcp/
 ├── package.json               # Unityパッケージ定義
 ├── README.md                  # 英語ドキュメント
-└── Editor/                    # エディター拡張実装
+├── Workflows/                 # Markdownワークフロー定義（NEW!）
+│   ├── editor-extension-workflow.md
+│   ├── error-investigation-workflow.md
+│   └── workflow-triggers.md
+└── Editor/                    # エディター拡張実装（21ツール）
     ├── uMCP.Editor.asmdef     # アセンブリ定義
     ├── Attributes/            # カスタム属性
     │   ├── McpToolAttribute.cs        # ツールクラス属性
@@ -232,18 +266,12 @@ Assets/uMcp/
     ├── Settings/              # 設定管理
     │   └── UMcpSettings.cs            # プロジェクト設定ScriptableSingleton
     └── Tools/                 # ビルトインツール実装
-        ├── UnityInfo/         # Unity情報ツール
-        │   ├── UnityInfoTool.cs
-        │   └── UnityInfoToolImplementation.cs
-        ├── AssetManagement/   # アセット管理ツール
-        │   ├── AssetManagementTool.cs
-        │   └── AssetManagementToolImplementation.cs
-        ├── ConsoleLog/        # コンソールログツール
-        │   ├── ConsoleLogTool.cs
-        │   └── ConsoleLogToolImplementation.cs
-        └── TestRunner/        # テスト実行ツール
-            ├── TestRunnerTool.cs
-            └── TestRunnerToolImplementation.cs
+        ├── UnityInfo/         # Unity情報ツール（5ツール）
+        ├── AssetManagement/   # アセット管理ツール（5ツール）
+        ├── ConsoleLog/        # コンソールログツール（4ツール）
+        ├── TestRunner/        # テスト実行ツール（3ツール）
+        ├── EditorExtension/   # エディタ拡張ツール（1ツール）
+        └── ToolWorkflow/      # ワークフロー提案ツール（2ツール・NEW!）
 ```
 
 ## 貢献

@@ -127,40 +127,63 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>特定のツールシーケンスのワークフロー情報を取得</summary>
-        [McpServerTool, Description("Markdownファイルから読み込んだワークフローパターンを取得")]
+        [McpServerTool, Description("Markdownファイルから読み込んだワークフローパターンを読みやすい形式で取得")]
         public async ValueTask<object> GetWorkflowPatterns()
         {
             await UniTask.SwitchToMainThread();
 
             var workflows = WorkflowMarkdownParser.LoadAllWorkflows();
-            var patterns = new List<WorkflowPattern>();
+            var result = new System.Text.StringBuilder();
+            
+            result.AppendLine("=== ワークフローパターン一覧 ===");
+            result.AppendLine();
 
-            foreach (var workflow in workflows)
+            // 空でないワークフローのみを表示
+            var validWorkflows = workflows.Where(w => !string.IsNullOrEmpty(w.Name) && 
+                                                     (!string.IsNullOrEmpty(w.Description) || w.Steps.Count > 0))
+                                         .ToList();
+
+            foreach (var workflow in validWorkflows)
             {
-                var pattern = new WorkflowPattern
+                result.AppendLine($"## {workflow.Name}");
+                if (!string.IsNullOrEmpty(workflow.Description))
                 {
-                    Name = workflow.Name,
-                    Description = workflow.Description,
-                    Steps = workflow.Steps.Select((step, index) => new WorkflowStep
+                    result.AppendLine($"**説明:** {workflow.Description}");
+                }
+                
+                if (workflow.Tags.Count > 0)
+                {
+                    result.AppendLine($"**対象:** {string.Join(", ", workflow.Tags)}");
+                }
+                result.AppendLine();
+
+                if (workflow.Steps.Count > 0)
+                {
+                    result.AppendLine("**実行手順:**");
+                    for (int i = 0; i < workflow.Steps.Count; i++)
                     {
-                        Order = index + 1,
-                        Tool = step.ToolName,
-                        Description = step.Description,
-                        Parameters = step.Parameters != null ? 
-                            System.Text.Json.JsonSerializer.Serialize(step.Parameters) : null
-                    }).ToArray(),
-                    UseCases = workflow.Tags.ToArray()
-                };
-                patterns.Add(pattern);
+                        var step = workflow.Steps[i];
+                        result.AppendLine($"{i + 1}. **{step.ToolName}** - {step.Description}");
+                        
+                        if (step.Parameters != null && step.Parameters.Count > 0)
+                        {
+                            result.AppendLine($"   パラメータ: {System.Text.Json.JsonSerializer.Serialize(step.Parameters, new System.Text.Json.JsonSerializerOptions { WriteIndented = false, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })}");
+                        }
+                    }
+                }
+                result.AppendLine();
+                result.AppendLine("---");
+                result.AppendLine();
             }
 
             return new
             {
                 Success = true,
-                Patterns = patterns,
-                TotalPatterns = patterns.Count,
+                FormattedOutput = result.ToString(),
+                TotalPatterns = validWorkflows.Count,
+                AllFiles = workflows.Count,
                 WorkflowDirectory = WorkflowMarkdownParser.WorkflowDirectory,
-                Message = "Markdownファイルからワークフローパターンを読み込みました"
+                Message = $"{validWorkflows.Count}個の有効なワークフローパターンを読み込みました（全{workflows.Count}ファイル中）"
             };
         }
     }

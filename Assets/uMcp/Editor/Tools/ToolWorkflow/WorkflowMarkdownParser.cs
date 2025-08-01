@@ -46,7 +46,7 @@ namespace uMCP.Editor.Tools
         /// <summary>単一のワークフローファイルをパース</summary>
         public static ParsedWorkflow ParseWorkflowFile(string filePath)
         {
-            var content = File.ReadAllText(filePath);
+            var content = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
             var workflow = new ParsedWorkflow
             {
                 FileName = Path.GetFileName(filePath),
@@ -55,7 +55,7 @@ namespace uMCP.Editor.Tools
                 TriggerConditions = new List<string>()
             };
 
-            var lines = content.Split('\n');
+            var lines = content.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
             var currentSection = "";
             WorkflowStepInfo currentStep = null;
             var inParametersSection = false;
@@ -127,11 +127,11 @@ namespace uMCP.Editor.Tools
         {
             if (line.StartsWith("- tool:"))
             {
-                step.ToolName = line.Substring(8).Trim();
+                step.ToolName = line.Substring("- tool:".Length).Trim();
             }
             else if (line.StartsWith("- 説明:"))
             {
-                step.Description = line.Substring(7).Trim();
+                step.Description = line.Substring("- 説明:".Length).Trim();
             }
             else if (line.StartsWith("- 必須:"))
             {
@@ -139,7 +139,7 @@ namespace uMCP.Editor.Tools
             }
             else if (line.StartsWith("- 条件:"))
             {
-                step.Condition = line.Substring(7).Trim();
+                step.Condition = line.Substring("- 条件:".Length).Trim();
             }
             else if (line.StartsWith("- パラメータ:"))
             {

@@ -40,6 +40,16 @@
   - errorsOnly: false
 - 必須: true
 
+### 5. 関連ドキュメント検索（推奨）
+- tool: search_documentation
+- 説明: 使用したUnity API関連の公式ドキュメントを検索
+- パラメータ:
+  - query: "EditorWindow MenuItem ScriptableObject"
+  - searchType: "ScriptReference"
+  - maxResults: 5
+- 必須: false
+- 条件: API実装の詳細確認が必要な場合
+
 ## 関連ワークフロー
 - error-investigation-workflow.md
 - test-execution-workflow.md

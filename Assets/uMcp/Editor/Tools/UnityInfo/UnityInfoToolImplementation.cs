@@ -541,7 +541,7 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>コンポーネントのカテゴリを取得</summary>
-        string GetComponentCategory(System.Type componentType)
+        string GetComponentCategory(Type componentType)
         {
             var typeName = componentType.Name;
             var namespaceName = componentType.Namespace;
@@ -572,7 +572,7 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>コンポーネントの説明を取得</summary>
-        string GetComponentDescription(System.Type componentType)
+        string GetComponentDescription(Type componentType)
         {
             var typeName = componentType.Name;
             
@@ -822,7 +822,7 @@ namespace uMCP.Editor.Tools
             }
 
             // カスタムクラス（Serializable）
-            if (valueType.GetCustomAttribute<System.SerializableAttribute>() != null)
+            if (valueType.GetCustomAttribute<SerializableAttribute>() != null)
             {
                 return SerializeCustomObject(value);
             }

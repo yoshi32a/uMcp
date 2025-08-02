@@ -65,6 +65,34 @@ internal sealed class MyToolImplementation
 - **System.Text.Json (9.0.7+)**: 独自MCPプロトコル実装
 - **Unity Test Framework**: テスト実行機能
 
+#### ドキュメント検索最適化パターン
+```csharp
+// 並列インデックス化による高速検索実装
+// 1. 並列事前インデックス構築
+cachedIndex = await ParallelIndexBuilder.BuildOrUpdateIndexAsync(DocumentationPath);
+
+// 2. キーワードベース高速検索
+if (cachedIndex.KeywordIndex.TryGetValue(queryTerm, out var exactMatches))
+{
+    foreach (var entryIndex in exactMatches)
+    {
+        candidateScores[entryIndex] = candidateScores.GetValueOrDefault(entryIndex, 0) + 5.0f;
+    }
+}
+
+// 3. 結果スコアリングとソート
+var sortedCandidates = candidateScores
+    .OrderByDescending(kvp => kvp.Value)
+    .Take(maxResults * 2);
+```
+
+**パフォーマンス最適化技術:**
+- **並列事前インデックス化**: HTMLファイルを並列処理で事前解析してキーワードマップ作成（最大8並列）
+- **キーワードマップ検索**: O(1)でのキーワードマッチング
+- **スコアベースランキング**: 完全一致5.0、部分一致2.0、タイトル一致10.0のスコアリング
+- **インデックスキャッシング**: 7日間有効な永続化インデックス
+- **自動インデックス更新**: Unity バージョン変更時の自動再構築
+
 ## MCPサーバー機能
 
 ### ビルトインツールセット（全21ツール）
@@ -96,6 +124,10 @@ internal sealed class MyToolImplementation
 
 #### エディタ拡張ツール（1ツール）
 - **execute_editor_method**: コンパイル済みエディタ拡張の静的メソッドを実行
+
+#### ドキュメント検索ツール（2ツール・並列処理専用）
+- **search_documentation**: Unity公式ドキュメント（Manual/ScriptReference）の高速検索
+- **rebuild_documentation_index**: 並列処理によるドキュメントインデックスの高速再構築
 
 #### ワークフロー提案ツール（2ツール・NEW!）
 - **get_next_action_suggestions**: 現在の状態から推奨される次のMCPツール実行を提案

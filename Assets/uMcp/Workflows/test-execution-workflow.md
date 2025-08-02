@@ -27,12 +27,16 @@ Unity プロジェクトでテストを体系的に実行するワークフロ�
 - 必須: false
 - 条件: EditModeテストが存在する場合
 
-### 3. PlayModeテスト実行
+### 3. PlayModeテスト実行（高速並列処理）
 - tool: run_play_mode_tests
-- 説明: Play Modeでの統合テストを高速実行
+- 説明: Play Modeでの統合テストを高速実行（ドメインリロード最適化）
 - パラメータ:
   - disableDomainReload: true
   - timeoutSeconds: 600
+- 技術実装:
+  - EditorSettings.enterPlayModeOptionsEnabled制御
+  - DisableDomainReload | DisableSceneReloadフラグ適用
+  - 設定の保存・復元パターン
 - 必須: false
 - 条件: PlayModeテストが存在する場合
 

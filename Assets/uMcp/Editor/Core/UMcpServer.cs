@@ -793,6 +793,7 @@ namespace uMCP.Editor.Core
             builder.AddSingleton(new Tools.TestRunnerToolImplementation());
             builder.AddSingleton(new Tools.EditorExtensionToolImplementation());
             builder.AddSingleton(new Tools.ToolWorkflowSuggestionImplementation());
+            builder.AddSingleton(new Tools.DocumentationSearchToolImplementation());
         }
 
         /// <summary>カスタムツールをサービスコレクションに読み込みます</summary>

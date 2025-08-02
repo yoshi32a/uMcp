@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using uMCP.Editor.Core.Attributes;
 using UnityEditor;
-using UnityEngine;
 
 namespace uMCP.Editor.Tools
 {
@@ -19,16 +18,16 @@ namespace uMCP.Editor.Tools
         {
             await UniTask.SwitchToMainThread();
 
-            var startTime = System.DateTime.Now;
+            var startTime = DateTime.Now;
             
             // シンプルにリフレッシュのみ
             AssetDatabase.Refresh();
             
-            var duration = (System.DateTime.Now - startTime).TotalMilliseconds;
+            var duration = (DateTime.Now - startTime).TotalMilliseconds;
 
             var info = new System.Text.StringBuilder();
             info.AppendLine("=== アセットデータベース更新 ===");
-            info.AppendLine($"**実行時刻:** {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             info.AppendLine($"**処理時間:** {duration:F2}ms");
             info.AppendLine();
             info.AppendLine("## ✅ 実行結果");
@@ -52,13 +51,13 @@ namespace uMCP.Editor.Tools
         {
             await UniTask.SwitchToMainThread();
 
-            var startTime = System.DateTime.Now;
+            var startTime = DateTime.Now;
             AssetDatabase.SaveAssets();
-            var duration = (System.DateTime.Now - startTime).TotalMilliseconds;
+            var duration = (DateTime.Now - startTime).TotalMilliseconds;
 
             var info = new System.Text.StringBuilder();
             info.AppendLine("=== プロジェクト保存 ===");
-            info.AppendLine($"**実行時刻:** {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             info.AppendLine($"**処理時間:** {duration:F2}ms");
             info.AppendLine();
             info.AppendLine("## ✅ 実行結果");
@@ -292,15 +291,15 @@ namespace uMCP.Editor.Tools
                 };
             }
 
-            var startTime = System.DateTime.Now;
+            var startTime = DateTime.Now;
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
-            var duration = (System.DateTime.Now - startTime).TotalMilliseconds;
+            var duration = (DateTime.Now - startTime).TotalMilliseconds;
 
             var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
             var info = new System.Text.StringBuilder();
             info.AppendLine($"=== アセット再インポート: {(asset ? asset.name : Path.GetFileNameWithoutExtension(assetPath))} ===");
             info.AppendLine($"**パス:** {assetPath}");
-            info.AppendLine($"**実行時刻:** {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             info.AppendLine($"**処理時間:** {duration:F2}ms");
             info.AppendLine();
             

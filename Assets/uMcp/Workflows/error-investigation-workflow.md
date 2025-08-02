@@ -35,7 +35,17 @@
 - 必須: false
 - 条件: シーン関連のエラーの場合
 
-### 4. コンソールクリア（オプション）
+### 4. 関連ドキュメント検索（推奨）
+- tool: search_documentation
+- 説明: エラーに関連するUnity公式ドキュメントを検索
+- パラメータ:
+  - query: "エラーメッセージのキーワード"
+  - searchType: "All"
+  - maxResults: 5
+- 必須: false
+- 条件: Unity API関連のエラーの場合
+
+### 5. コンソールクリア（オプション）
 - tool: clear_console_logs
 - 説明: 調査後にコンソールをクリア
 - 必須: false

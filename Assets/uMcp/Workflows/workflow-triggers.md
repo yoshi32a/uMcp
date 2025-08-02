@@ -49,6 +49,18 @@
   - get_hierarchy_analysis
   - get_game_object_info
 
+#### キーワード: "documentation", "document", "ドキュメント", "Unity API", "Manual", "ScriptReference"
+- 推奨ワークフロー: documentation-search-workflow.md
+- ツール候補:
+  - search_documentation
+  - rebuild_documentation_index
+
+#### キーワード: "search", "検索", "find API", "Unity help"
+- 推奨ワークフロー: documentation-search-workflow.md
+- ツール候補:
+  - search_documentation
+  - get_unity_info
+
 ## 連鎖ルール
 
 ### エラー発生時の自動連鎖
@@ -60,3 +72,14 @@
 1. ファイル作成検出 → refresh_assets
 2. → (待機: コンパイル完了)
 3. → execute_editor_method または get_console_logs
+
+### ドキュメント検索時の自動連鎖
+1. 初回検索 → rebuild_documentation_index (インデックス未存在時)
+2. → search_documentation
+3. → (オプション) log_to_console (結果記録用)
+
+### インデックス更新時の自動連鎖
+1. Unity バージョン変更検出 → get_unity_info
+2. → rebuild_documentation_index
+3. → search_documentation (検証用)
+4. → save_project

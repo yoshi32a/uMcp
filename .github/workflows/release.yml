@@ -54,9 +54,9 @@ jobs:
         echo "Files in source package:"
         ls -la
         
-        # Create tgz ensuring no ./ prefix using specific tar options
-        tar --create --gzip --file=../../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz \
-            --exclude-vcs --exclude='.*' --transform='s|^\./||' .
+        # Create tgz from current directory without ./ prefix
+        tar --create --gzip --file=../../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-ump.tgz \
+            --exclude-vcs * .[^.]*
         
         cd ../..
         

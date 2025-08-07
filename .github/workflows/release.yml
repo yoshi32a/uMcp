@@ -54,12 +54,20 @@ jobs:
         echo "Files in source package:"
         ls -la
         
-        # Create tgz using shell globbing (more reliable than find)
-        shopt -s dotglob nullglob
-        tar --create --gzip --file=../../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz \
-            --exclude-vcs --transform='s,^\./,,' *
-        
+        # Create UPM package using temp directory to ensure correct structure
         cd ../..
+        mkdir -p temp_upm
+        cp -r Assets/uMcp/* temp_upm/
+        
+        # Verify structure
+        echo "Temp UPM directory contents:"
+        ls -la temp_upm/
+        
+        # Create tgz from temp directory using bash globbing
+        cd temp_upm
+        bash -c "shopt -s dotglob; tar --create --gzip --file=../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz --exclude-vcs *"
+        cd ..
+        rm -rf temp_upm
         
         # Debug: Check the structure of created tgz
         echo "Checking UPM package structure:"

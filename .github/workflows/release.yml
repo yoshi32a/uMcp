@@ -44,13 +44,13 @@ jobs:
         
     - name: Create package archive
       run: |
-        # Create the package tar.gz
-        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz -C Assets uMcp/
+        # Create the package tgz for Assets folder
+        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tgz -C Assets uMcp/
         
         # Also create a renamed version for Unity Package Manager
         mkdir -p temp_package
         cp -r Assets/uMcp temp_package/com.umcp.unity-mcp-server
-        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz -C temp_package com.umcp.unity-mcp-server/
+        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz -C temp_package com.umcp.unity-mcp-server/
         
     - name: Generate release notes
       id: release_notes
@@ -61,14 +61,20 @@ jobs:
         ## Installation
         
         ### Method 1: Manual Installation
-        1. Download \`com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz\`
+        1. Download \`com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tgz\`
         2. Extract to your Unity project's \`Assets\` folder
         
-        ### Method 2: Unity Package Manager
-        1. Download \`com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz\`
+        ### Method 2: Unity Package Manager (Local)
+        1. Download \`com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz\`
         2. Extract to your Unity project's \`Packages\` folder
         
-        ### Method 3: Git URL
+        ### Method 3: Unity Package Manager (Direct)
+        1. Download \`com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz\` to any location
+        2. In Unity, open Package Manager
+        3. Click "+" → "Add package from tarball..."
+        4. Select the downloaded .tgz file
+        
+        ### Method 4: Git URL
         Add the following to your \`manifest.json\`:
         \`\`\`json
         "com.umcp.unity-mcp-server": "https://github.com/${{ github.repository }}.git#${{ steps.get_version.outputs.TAG_NAME }}"
@@ -106,7 +112,7 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz
-          com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz
+          com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tgz
+          com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

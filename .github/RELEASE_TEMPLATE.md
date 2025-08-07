@@ -27,14 +27,20 @@
 ## 📦 インストール方法
 
 ### 方法1: 手動インストール
-1. `com.umcp.unity-mcp-server-{VERSION}.tar.gz` をダウンロード
+1. `com.umcp.unity-mcp-server-{VERSION}.tgz` をダウンロード
 2. Unity プロジェクトの `Assets` フォルダに展開
 
-### 方法2: Unity Package Manager
-1. `com.umcp.unity-mcp-server-{VERSION}-upm.tar.gz` をダウンロード  
+### 方法2: Unity Package Manager (ローカル)
+1. `com.umcp.unity-mcp-server-{VERSION}-upm.tgz` をダウンロード  
 2. Unity プロジェクトの `Packages` フォルダに展開
 
-### 方法3: Git URL
+### 方法3: Unity Package Manager (tarball)
+1. `com.umcp.unity-mcp-server-{VERSION}-upm.tgz` をダウンロード
+2. Unity で Package Manager を開く
+3. 「+」→「Add package from tarball...」をクリック
+4. ダウンロードした .tgz ファイルを選択
+
+### 方法4: Git URL
 `manifest.json` に以下を追加:
 ```json
 "com.umcp.unity-mcp-server": "https://github.com/{REPOSITORY}.git#{TAG}"

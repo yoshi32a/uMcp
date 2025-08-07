@@ -47,10 +47,12 @@ jobs:
         # Create the package tgz for Assets folder
         tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tgz -C Assets uMcp/
         
-        # Also create a renamed version for Unity Package Manager
+        # Create UPM package with proper structure (package.json at root)
         mkdir -p temp_package
-        cp -r Assets/uMcp temp_package/com.umcp.unity-mcp-server
-        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz -C temp_package com.umcp.unity-mcp-server/
+        cp -r Assets/uMcp/* temp_package/
+        cd temp_package
+        tar -czf ../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz .
+        cd ..
         
     - name: Generate release notes
       id: release_notes

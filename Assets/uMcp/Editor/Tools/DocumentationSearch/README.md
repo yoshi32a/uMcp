@@ -2,7 +2,7 @@
 
 ## 概要
 
-Unity Documentation Search Tool は、Unity公式ドキュメント（Manual/ScriptReference）をMCP経由で検索可能にするツールです。AIアシスタント（Claude、GitHub Copilot等）がUnity公式情報を参照して、正確で最新の回答を提供できるようになります。
+Unity Documentation Search Tool は、Unity公式マニュアル（Manual）をMCP経由で高速検索可能にするツールです。AIアシスタント（Claude、GitHub Copilot等）がUnity公式情報を参照して、正確で最新の回答を提供できるようになります。
 
 ## システムアーキテクチャ
 
@@ -16,19 +16,21 @@ Unity Documentation Search Tool は、Unity公式ドキュメント（Manual/Scr
 [DocumentationSearchToolImplementation]
     ↓ HTML解析・検索
 [Unity公式ドキュメント]
-    C:\Program Files\Unity\Hub\Editor\{version}\Editor\Data\Documentation\en\
-    ├── Manual\          (使い方・概念)
-    └── ScriptReference\ (C# API リファレンス)
+    Windows: C:\Program Files\Unity\Hub\Editor\{version}\Editor\Data\Documentation\en\
+    macOS:   /Applications/Unity/Hub/Editor/{version}/Unity.app/Contents/Documentation/en/
+    └── Manual\          (使い方・概念)
 ```
 
 ### 📁 ファイル構成
 
 ```
 Assets/uMcp/Editor/Tools/DocumentationSearch/
-├── DocumentationSearchTool.cs                    # ScriptableObject ツール定義
-├── DocumentationSearchToolImplementation.cs     # メイン検索ロジック
+├── DocumentationSearchTool.cs                   # ScriptableObject ツール定義
+├── DocumentationSearchToolImplementation.cs     # メイン検索ロジック  
 ├── DocumentationSearchResponse.cs               # レスポンス形式
 ├── DocumentationSearchResult.cs                 # 個別検索結果
+├── LightweightDocumentationIndex.cs            # 軽量インデックス構造
+├── ParallelIndexBuilder.cs                      # 並列インデックス構築
 └── README.md                                    # このファイル
 ```
 
@@ -45,7 +47,7 @@ Assets/uMcp/Editor/Tools/DocumentationSearch/
 - **メソッド**: `SearchDocumentation` が `[McpServerTool]` でMCP API化
 - **パラメータ**: 
   - `query`: 検索クエリ（英語推奨）
-  - `searchType`: All/Manual/ScriptReference
+  - `searchType`: 現在はManualのみ対応
   - `maxResults`: 最大結果数（1-50）
 
 #### 3. DocumentationSearchResponse (Response Model)
@@ -64,7 +66,7 @@ Assets/uMcp/Editor/Tools/DocumentationSearch/
 
 1. **パラメータ検証**: クエリの有効性、結果数制限
 2. **パス確認**: Unityドキュメントフォルダの存在チェック
-3. **ディレクトリ走査**: Manual/ScriptReferenceのHTMLファイル列挙
+3. **ディレクトリ走査**: ManualのHTMLファイル列挙
 4. **ファイル解析**: 各HTMLファイルを並列処理で分析
 5. **スコアリング**: 検索語との一致度計算
 6. **結果整理**: スコア順ソート、上位結果を返却
@@ -134,7 +136,7 @@ var snippet = content.Substring(start, length);
 **新しいアプローチ：**
 ```csharp
 // 1. 事前インデックス構築（初回のみ）
-cachedIndex = await DocumentationIndexBuilder.BuildOrUpdateIndexAsync(DocumentationPath);
+cachedIndex = await ParallelIndexBuilder.BuildOrUpdateIndexAsync(DocumentationPath);
 
 // 2. キーワードマップによるO(1)検索
 if (cachedIndex.KeywordIndex.TryGetValue(queryTerm, out var exactMatches))
@@ -154,7 +156,7 @@ var sortedCandidates = candidateScores
 #### 2. **インデックス構造とキャッシング**
 
 ```csharp
-public class DocumentationIndex
+public class LightweightDocumentationIndex
 {
     // メタデータ
     public string Version { get; set; } = "1.0";
@@ -162,7 +164,7 @@ public class DocumentationIndex
     public string UnityVersion { get; set; }
     
     // インデックスエントリ（全文書情報）
-    public List<DocumentationIndexEntry> Entries { get; set; }
+    public List<LightweightIndexEntry> Entries { get; set; }
     
     // 高速検索用キーワードマップ（O(1)アクセス）
     public Dictionary<string, List<int>> KeywordIndex { get; set; }
@@ -171,7 +173,7 @@ public class DocumentationIndex
 
 **インデックスファイル保存場所:**
 ```
-C:\Users\{user}\AppData\LocalLow\DefaultCompany\UnityMcpTest\uMcp_DocumentationIndex.json
+UserSettings/document_index/uMcp_ParallelLightIndex.json
 ```
 
 #### 3. **インテリジェントキーワード抽出**
@@ -211,7 +213,7 @@ static List<string> GenerateKeywords(string title, string content)
 
 **インデックス有効性チェック:**
 ```csharp
-static bool IsIndexValid(DocumentationIndex index, string documentationPath)
+static bool IsIndexValid(LightweightDocumentationIndex index, string documentationPath)
 {
     if (index == null) return false;
     
@@ -221,8 +223,7 @@ static bool IsIndexValid(DocumentationIndex index, string documentationPath)
     // Unityバージョン一致確認
     if (index.UnityVersion != Application.unityVersion) return false;
     
-    // 7日以内作成確認
-    if (DateTime.Now - index.CreatedAt > TimeSpan.FromDays(7)) return false;
+    // 7日経過チェックを削除 - 一度作成したら永続的に使用
     
     return true;
 }
@@ -230,7 +231,6 @@ static bool IsIndexValid(DocumentationIndex index, string documentationPath)
 
 **自動更新条件:**
 - 🔄 Unityバージョン変更時
-- 📅 インデックス作成から7日経過時
 - 🗂️ ドキュメントパス変更時
 - 🚫 インデックスファイル不存在時
 
@@ -238,7 +238,7 @@ static bool IsIndexValid(DocumentationIndex index, string documentationPath)
 
 | 項目 | 従来方式 | インデックス方式 |
 |------|----------|------------------|
-| **初回実行** | 52秒 | 2-3分（インデックス構築）|
+| **初回実行** | 52秒 | 1-2分（インデックス構築）|
 | **2回目以降** | 52秒 | **< 1秒** ⚡ |
 | **メモリ使用量** | 動的（大きな負荷）| 固定（軽量）|
 | **CPU使用率** | 高（リアルタイム処理）| 低（インデックス参照）|
@@ -304,7 +304,7 @@ MCPプロトコル経由で以下のように呼び出し可能：
         "name": "search_documentation",
         "arguments": {
             "query": "NavMesh pathfinding",
-            "searchType": "Manual",
+            "searchType": "All",
             "maxResults": 5
         }
     }
@@ -346,9 +346,8 @@ claude chat
 ```
 📊 インデックス構築中...
 ├── Manual: 3205ファイルを処理中...
-├── ScriptReference: 2847ファイルを処理中...
-├── キーワード抽出: 145,892キーワード
-└── インデックス保存: 完了 (2分34秒)
+├── キーワード抽出: 約70,000キーワード
+└── インデックス保存: 完了 (1-2分)
 ```
 
 ### 2. **高速検索の利用**
@@ -369,7 +368,7 @@ claude chat
 === Unity ドキュメント検索結果 ===
 **検索クエリ:** NavMesh pathfinding
 **検索時間:** 245ms
-**インデックス: 6052エントリ, 145892キーワード**
+**インデックス: 3205エントリ, 約70,000キーワード**
 **結果:** 5件表示（全12件）
 
 📖 **Navigation and Pathfinding** (スコア: 0.85)
@@ -386,7 +385,7 @@ claude chat
     "name": "search_documentation",
     "arguments": {
         "query": "Vector3 operations",
-        "searchType": "ScriptReference",
+        "searchType": "All",
         "maxResults": 10
     }
 }
@@ -406,7 +405,7 @@ claude chat
 // 高速検索
 var response = await searchTool.SearchDocumentation(
     query: "Vector3 operations",
-    searchType: "ScriptReference", 
+    searchType: "All", 
     maxResults: 10
 );
 
@@ -420,16 +419,16 @@ Console.WriteLine($"構築完了: {rebuildResult.EntriesCount}エントリ");
 ### システム要件
 - **Unity**: 2022.3 LTS以上
 - **依存関係**: UniTask 2.3.3+
-- **プラットフォーム**: Windows（Unityドキュメントパス対応）
+- **プラットフォーム**: Windows, macOS (クロスプラットフォーム対応)
 - **ドキュメント**: Unity公式ドキュメントのローカルインストール
 
 ### パフォーマンス指標
 
 #### **インデックス構築時（初回のみ）**
-- **構築時間**: 2-3分（Unity 6000.1.10f1）
-- **処理ファイル数**: ~6000ファイル（Manual: 3205 + ScriptReference: 2847）
-- **生成キーワード数**: ~150,000キーワード
-- **インデックスファイルサイズ**: 15-20MB
+- **構築時間**: 1-2分（Unity 6000.1.10f1）
+- **処理ファイル数**: ~3200ファイル（Manualのみ）
+- **生成キーワード数**: ~70,000キーワード
+- **インデックスファイルサイズ**: 8-10MB
 - **メモリ使用**: 構築時最大500MB
 
 #### **検索実行時（2回目以降）**
@@ -441,11 +440,11 @@ Console.WriteLine($"構築完了: {rebuildResult.EntriesCount}エントリ");
 #### **スケーラビリティ**
 - **時間計算量**: O(1) キーワード検索 + O(k log k) スコアソート
 - **空間計算量**: O(n) インデックスサイズ（n=文書数）
-- **インデックス更新**: 7日間隔の自動更新
+- **インデックス更新**: 手動更新のみ（自動更新なし）
 
 ### 制限事項
 - **言語**: 英語ドキュメントのみ対応
-- **プラットフォーム**: Windows対応（Unity標準パス）
+- **プラットフォーム**: Windows/macOS対応（クロスプラットフォーム）
 - **検索精度**: キーワードベース（将来的にRAG統合予定）
 - **初回実行**: インデックス構築により初回のみ時間要
 
@@ -455,7 +454,7 @@ Console.WriteLine($"構築完了: {rebuildResult.EntriesCount}エントリ");
 
 1. **RAG統合**: ベクトル検索による意味的検索の高精度化
 2. **多言語対応**: 日本語ドキュメント対応
-3. **クロスプラットフォーム**: macOS/Linux対応
+3. ✅ **クロスプラットフォーム**: **完了** - Windows/macOS対応済み
 4. ✅ **インデックス化**: **完了** - 50倍高速化を実現
 5. **カスタムドキュメント**: ユーザー独自ドキュメント対応
 6. **検索履歴**: よく検索される内容の学習・提案

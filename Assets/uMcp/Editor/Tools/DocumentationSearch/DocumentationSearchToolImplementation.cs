@@ -15,7 +15,7 @@ namespace uMCP.Editor.Tools
     internal sealed class DocumentationSearchToolImplementation
     {
         static readonly string UnityInstallPath = GetUnityInstallPath();
-        static readonly string DocumentationPath = Path.Combine(UnityInstallPath, "Editor", "Data", "Documentation", "en");
+        static readonly string DocumentationPath = GetDocumentationPath();
 
         static LightweightDocumentationIndex cachedLightIndex;
 
@@ -288,18 +288,42 @@ namespace uMCP.Editor.Tools
             return snippet.Length > 150 ? snippet.Substring(0, 150) + "..." : snippet;
         }
 
-        /// <summary>Unityインストールパスを取得</summary>
+        /// <summary>Unityインストールパスを取得（Windows/Mac対応）</summary>
         static string GetUnityInstallPath()
         {
-            // Windows環境での標準的なUnityパス
             var unityVersion = Application.unityVersion;
-            var unityInstallPath = $@"C:\Program Files\Unity\Hub\Editor\{unityVersion}";
+            
+            // Mac環境の場合
+            if (Application.platform == RuntimePlatform.OSXEditor)
+            {
+                var macPath = $"/Applications/Unity/Hub/Editor/{unityVersion}";
+                if (Directory.Exists(macPath))
+                    return macPath;
+                    
+                // フォールバック
+                return "/Applications/Unity/Hub/Editor/6000.1.10f1";
+            }
+            
+            // Windows環境
+            var windowsPath = $@"C:\Program Files\Unity\Hub\Editor\{unityVersion}";
+            if (Directory.Exists(windowsPath))
+                return windowsPath;
 
-            if (Directory.Exists(unityInstallPath))
-                return unityInstallPath;
-
-            // フォールバック: レジストリから取得を試行するなど
+            // フォールバック
             return @"C:\Program Files\Unity\Hub\Editor\6000.1.10f1";
+        }
+
+        /// <summary>ドキュメントパスを取得（Windows/Mac対応）</summary>
+        static string GetDocumentationPath()
+        {
+            // Mac環境の場合
+            if (Application.platform == RuntimePlatform.OSXEditor)
+            {
+                return Path.Combine(UnityInstallPath, "Unity.app", "Contents", "Documentation", "en");
+            }
+            
+            // Windows環境
+            return Path.Combine(UnityInstallPath, "Editor", "Data", "Documentation", "en");
         }
     }
 }

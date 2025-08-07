@@ -12,7 +12,7 @@ namespace uMCP.Editor.Tools
         /// <summary>ドキュメントタイトル</summary>
         public string Title { get; set; }
         
-        /// <summary>ドキュメントタイプ（Manual/ScriptReference）</summary>
+        /// <summary>ドキュメントタイプ（現在はManualのみ）</summary>
         public string DocumentType { get; set; }
         
         /// <summary>マッチした内容の抜粋</summary>

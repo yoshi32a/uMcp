@@ -56,6 +56,12 @@ jobs:
         
         # Create UPM package using temp directory to ensure correct structure
         cd ../..
+        
+        # Debug: Show current directory and contents
+        echo "Current directory: $(pwd)"
+        echo "Current directory contents:"
+        ls -la
+        
         mkdir -p temp_upm
         cp -r Assets/uMcp/* temp_upm/
         
@@ -63,8 +69,17 @@ jobs:
         echo "Temp UPM directory contents:"
         ls -la temp_upm/
         
+        # Verify package.json exists
+        if [ -f temp_upm/package.json ]; then
+            echo "package.json found in temp_upm"
+            cat temp_upm/package.json | head -5
+        else
+            echo "ERROR: package.json not found in temp_upm!"
+        fi
+        
         # Create tgz from temp directory using bash globbing
         cd temp_upm
+        echo "Creating tgz from directory: $(pwd)"
         bash -c "shopt -s dotglob; tar --create --gzip --file=../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz --exclude-vcs *"
         cd ..
         rm -rf temp_upm

@@ -50,9 +50,8 @@ jobs:
         # Create UPM package with proper structure (package.json at root)
         mkdir -p temp_package
         cp -r Assets/uMcp/* temp_package/
-        cd temp_package
-        tar -czf ../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz .
-        cd ..
+        # Create tar without ./ prefix using --transform
+        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz -C temp_package --transform 's,^\./,,' .
         
     - name: Generate release notes
       id: release_notes

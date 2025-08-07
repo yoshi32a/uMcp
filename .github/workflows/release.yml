@@ -1,0 +1,127 @@
+name: Release Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for release'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get version from tag
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.tag_name }}"
+        else
+          VERSION=${GITHUB_REF#refs/tags/}
+        fi
+        # Remove 'v' prefix if present
+        VERSION=${VERSION#v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "TAG_NAME=${{ github.event.inputs.tag_name || github.ref_name }}" >> $GITHUB_OUTPUT
+    
+    - name: Update package.json version
+      run: |
+        cd Assets/uMcp
+        # Update version in package.json
+        jq --arg version "${{ steps.get_version.outputs.VERSION }}" '.version = $version' package.json > package.json.tmp
+        mv package.json.tmp package.json
+        
+    - name: Create package archive
+      run: |
+        # Create the package tar.gz
+        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz -C Assets uMcp/
+        
+        # Also create a renamed version for Unity Package Manager
+        mkdir -p temp_package
+        cp -r Assets/uMcp temp_package/com.umcp.unity-mcp-server
+        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz -C temp_package com.umcp.unity-mcp-server/
+        
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        cat << EOF > release_notes.md
+        # Unity MCP Server v${{ steps.get_version.outputs.VERSION }}
+        
+        ## Installation
+        
+        ### Method 1: Manual Installation
+        1. Download \`com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz\`
+        2. Extract to your Unity project's \`Assets\` folder
+        
+        ### Method 2: Unity Package Manager
+        1. Download \`com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz\`
+        2. Extract to your Unity project's \`Packages\` folder
+        
+        ### Method 3: Git URL
+        Add the following to your \`manifest.json\`:
+        \`\`\`json
+        "com.umcp.unity-mcp-server": "https://github.com/${{ github.repository }}.git#${{ steps.get_version.outputs.TAG_NAME }}"
+        \`\`\`
+        
+        ## Requirements
+        - Unity 2022.3 LTS or higher
+        - UniTask 2.3.3 or higher
+        
+        ## What's New
+        See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.TAG_NAME }}/Assets/uMcp/CHANGELOG.md) for details.
+        
+        ## Features
+        - 21 built-in MCP tools
+        - Markdown-based workflow system
+        - Intelligent action suggestions
+        - Unity Editor integration
+        - Async/await support with UniTask
+        
+        ## Getting Started
+        1. Install the package using one of the methods above
+        2. Open Unity Editor
+        3. Go to \`Tools > uMCP > Create Default Tool Assets\`
+        4. The MCP server will start automatically at \`http://localhost:49001/umcp/\`
+        
+        For more information, see the [README](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.TAG_NAME }}/Assets/uMcp/README.md).
+        EOF
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
+        release_name: Unity MCP Server v${{ steps.get_version.outputs.VERSION }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Asset - Standard Package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz
+        asset_name: com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz
+        asset_content_type: application/gzip
+        
+    - name: Upload Release Asset - UPM Package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz
+        asset_name: com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz
+        asset_content_type: application/gzip

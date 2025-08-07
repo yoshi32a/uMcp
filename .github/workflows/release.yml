@@ -11,6 +11,9 @@ on:
         required: true
         default: 'v1.0.0'
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -95,33 +98,15 @@ jobs:
         EOF
         
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
-        release_name: Unity MCP Server v${{ steps.get_version.outputs.VERSION }}
+        name: Unity MCP Server v${{ steps.get_version.outputs.VERSION }}
         body_path: release_notes.md
         draft: false
         prerelease: false
-        
-    - name: Upload Release Asset - Standard Package
-      uses: actions/upload-release-asset@v1
+        files: |
+          com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz
+          com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz
-        asset_name: com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tar.gz
-        asset_content_type: application/gzip
-        
-    - name: Upload Release Asset - UPM Package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz
-        asset_name: com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tar.gz
-        asset_content_type: application/gzip

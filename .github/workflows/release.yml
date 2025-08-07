@@ -22,6 +22,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Setup Node.js for npm pack
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
     - name: Get version from tag
       id: get_version
       run: |
@@ -44,49 +49,45 @@ jobs:
         
     - name: Create package archive
       run: |
-        # Create the package tgz for Assets folder
+        # Create the standard package tgz for Assets folder (backward compatibility)
         tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tgz -C Assets uMcp/
         
-        # Create UPM package with proper structure
-        # Unity Package Manager requires package.json at the root level
-        
+        # Create UPM package using npm pack (Unity recommended method)
         cd Assets/uMcp
         echo "Files in source package:"
         ls -la
         
-        # Create UPM package using temp directory to ensure correct structure
-        cd ../..
-        
-        # Debug: Show current directory and contents
-        echo "Current directory: $(pwd)"
-        echo "Current directory contents:"
-        ls -la
-        
-        mkdir -p temp_upm
-        cp -r Assets/uMcp/* temp_upm/
-        
-        # Verify structure
-        echo "Temp UPM directory contents:"
-        ls -la temp_upm/
-        
-        # Verify package.json exists
-        if [ -f temp_upm/package.json ]; then
-            echo "package.json found in temp_upm"
-            cat temp_upm/package.json | head -5
+        # Verify package.json exists and is valid
+        if [ -f package.json ]; then
+            echo "package.json found and verified:"
+            cat package.json | head -10
+            
+            # Use npm pack to create Unity-compatible tgz
+            echo "Creating UPM package with npm pack..."
+            npm pack --pack-destination ../..
+            
+            # List created files
+            cd ../..
+            echo "npm pack created files:"
+            ls -la *.tgz
+            
+            # Rename npm pack output to expected filename
+            NPM_PACK_FILE=$(ls com.yoshi32a.unity-mcp-server-*.tgz 2>/dev/null | head -1 || echo "")
+            if [ -n "$NPM_PACK_FILE" ]; then
+                mv "$NPM_PACK_FILE" "com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz"
+                echo "Renamed $NPM_PACK_FILE to com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz"
+            else
+                echo "ERROR: npm pack failed to create tgz file!"
+                exit 1
+            fi
+            
+            # Debug: Check the structure of created tgz
+            echo "Checking UPM package structure:"
+            tar -tzf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz | head -20
         else
-            echo "ERROR: package.json not found in temp_upm!"
+            echo "ERROR: package.json not found!"
+            exit 1
         fi
-        
-        # Create tgz from temp directory using bash globbing
-        cd temp_upm
-        echo "Creating tgz from directory: $(pwd)"
-        bash -c "shopt -s dotglob; tar --create --gzip --file=../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz --exclude-vcs *"
-        cd ..
-        rm -rf temp_upm
-        
-        # Debug: Check the structure of created tgz
-        echo "Checking UPM package structure:"
-        tar -tzf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz | head -20
         
     - name: Generate release notes
       id: release_notes

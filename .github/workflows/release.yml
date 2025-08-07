@@ -47,11 +47,22 @@ jobs:
         # Create the package tgz for Assets folder
         tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}.tgz -C Assets uMcp/
         
-        # Create UPM package with proper structure (package.json at root)
-        mkdir -p temp_package
-        cp -r Assets/uMcp/* temp_package/
-        # Create tar without ./ prefix using --transform
-        tar -czf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz -C temp_package --transform 's,^\./,,' .
+        # Create UPM package with proper structure
+        # Unity Package Manager requires package.json at the root level
+        
+        cd Assets/uMcp
+        echo "Files in source package:"
+        ls -la
+        
+        # Create tgz ensuring no ./ prefix using specific tar options
+        tar --create --gzip --file=../../com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz \
+            --exclude-vcs --exclude='.*' --transform='s|^\./||' .
+        
+        cd ../..
+        
+        # Debug: Check the structure of created tgz
+        echo "Checking UPM package structure:"
+        tar -tzf com.umcp.unity-mcp-server-${{ steps.get_version.outputs.VERSION }}-upm.tgz | head -20
         
     - name: Generate release notes
       id: release_notes

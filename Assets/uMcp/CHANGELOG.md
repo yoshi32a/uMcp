@@ -9,7 +9,7 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 
 ### Changed
 - **ドキュメント国際化**: プロジェクト全体のドキュメントを英語から日本語に統一
-- **package.json**: description フィールドを日本語に変更
+- **package.json**: description フィールドを日本語に変更、ツール数を21から25に修正
 - **LICENSE.md**: MIT ライセンス全体を日本語版に変換
 - **CHANGELOG.md**: 全ての英語コンテンツを日本語に変換
 - **ワークフロー**: documentation-search-workflow.md タイトルを日本語に変更
@@ -25,6 +25,7 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 - **型安全性**: 無名オブジェクト戻り値を削除してコンパイル時型チェックを改善
 - **JSON シリアライゼーション**: 一貫したレスポンス構造でSystem.Text.Json互換性を強化
 - **コード一貫性**: 25個のビルトインツール全体でレスポンス形式を統一
+- **ビルド管理ツール**: 4つの新しいビルド関連ツールを追加
 
 ### 技術的改善
 - MCPプロトコル準拠のために適切なJSONプロパティ命名を持つ `StandardResponse` クラスを追加
@@ -38,7 +39,7 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 - Unity MCP Serverの初回リリース
 - HTTP転送を使用したコアMCPサーバー実装
 - Unity Editorと統合された自動起動機能
-- 4つのビルトインツールカテゴリを持つ包括的ツールシステム
+- 8つのビルトインツールカテゴリを持つツールシステム
 
 #### コア機能
 - **HTTPサーバー**: 設定可能なポート上で動作（デフォルト: 49001）
@@ -47,29 +48,47 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 - **エラーハンドリング**: タイムアウトサポート付きの堅牢なエラー処理
 - **CORS サポート**: Webベースクライアント用の設定可能なCORS
 
-#### ビルトインツール
-- **Unity情報ツール**
+#### ビルトインツール（25ツール）
+- **Unity情報ツール（5ツール）**
   - `get_unity_info`: Unity エディターとプロジェクト情報
   - `get_scene_info`: 現在のシーン構造分析
-  - `log_message`: 異なるレベルでのコンソールログ出力
+  - `get_hierarchy_analysis`: 指定GameObjectとその子階層の詳細分析
+  - `get_game_object_info`: 指定GameObjectの詳細情報
+  - `get_prefab_info`: 指定Prefabの詳細情報
 
-- **アセット管理ツール**
+- **アセット管理ツール（4ツール）**
   - `refresh_assets`: アセットデータベースのリフレッシュ
   - `save_project`: プロジェクトとアセットの保存
   - `find_assets`: フィルタリング付きアセット検索
   - `get_asset_info`: 詳細なアセット情報
-  - `reimport_asset`: アセットの強制再インポート
 
-- **コンソールログツール**
+- **ビルド管理ツール（4ツール）**
+  - `get_build_status`: 現在のビルド状態と最後のビルド結果
+  - `wait_for_build_completion`: ビルド完了待機
+  - `get_last_build_log`: 最後のビルドの詳細ログ
+  - `clear_build_cache`: ビルドキャッシュクリア
+
+- **コンソールログツール（4ツール）**
   - `get_console_logs`: フィルタリング付きコンソールログ取得
   - `clear_console_logs`: すべてのコンソールログのクリア
   - `log_to_console`: カスタムコンソール出力
   - `get_log_statistics`: コンソールログ統計
 
-- **テストランナーツール**
+- **テスト実行ツール（3ツール）**
   - `run_edit_mode_tests`: EditModeテストの実行
   - `run_play_mode_tests`: PlayModeテストの実行
   - `get_available_tests`: 利用可能なテストの一覧
+
+- **ドキュメント検索ツール（2ツール）**
+  - `search_documentation`: Unity公式ドキュメント検索
+  - `rebuild_documentation_index`: ドキュメントインデックス再構築
+
+- **ワークフロー提案ツール（2ツール）**
+  - `get_next_action_suggestions`: 次のアクション提案
+  - `get_workflow_patterns`: Markdownワークフローパターン
+
+- **エディタ拡張ツール（1ツール）**
+  - `execute_editor_method`: 静的メソッド実行
 
 #### 設定と管理
 - **Unity メニュー統合**: `Tools > uMCP` メニュー
@@ -84,7 +103,7 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 - **アセンブリリロード処理**: コード変更時の適切なクリーンアップ
 
 ### 技術詳細
-- **Unity バージョン**: Unity 6000.0 以降が必要
+- **Unity バージョン**: Unity 2022.3 LTS 以降が必要
 - **依存関係**: UniTask 2.3.3+
 - **アーキテクチャ**: 関心の明確な分離を持つモジュラー設計
 - **パフォーマンス**: Unity Editor のパフォーマンス最適化
@@ -100,11 +119,8 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 ## [未リリース]
 
 ### 予定機能
-- GameObject操作ツール
-- ビルド自動化ツール
-- Package Manager統合
+- Package Manager統合ツール
 - パフォーマンスプロファイリングツール
-- シーン管理ユーティリティ
 - カスタムインスペクター統合
 
 ---

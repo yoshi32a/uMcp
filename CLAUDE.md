@@ -11,7 +11,7 @@
 **Unity MCP Server** は、完全に実装されたModel Context Protocol (MCP) サーバーパッケージです。Unity Editor統合MCPサーバーとして開発されました。
 
 **Unityバージョン:** 2022.3 LTS以上  
-**パッケージ名:** com.umcp.unity-mcp-server  
+**パッケージ名:** com.yoshi32a.unity-mcp-server  
 **配布方式:** Unity Package (.unitypackage / Git URL)  
 **ライセンス:** MIT License
 
@@ -22,7 +22,7 @@
 - **UMcpSettings**: ProjectSettingsでの設定管理（ScriptableSingleton）
 - **UMcpServerManager**: Unity Editor統合、自動起動、アセンブリリロード対応
 
-### ツールシステム（4カテゴリ17ツール）
+### ツールシステム（8カテゴリ25ツール）
 1. **UnityInfo**: Unity情報・シーン分析
 2. **AssetManagement**: アセット操作（検索・更新・保存）
 3. **ConsoleLog**: コンソールログ管理・統計
@@ -133,38 +133,37 @@ var sortedCandidates = candidateScores
 - **get_game_object_info**: 指定GameObjectの詳細情報を取得
 - **get_prefab_info**: 指定Prefabの詳細情報を取得
 
-#### アセット管理ツール（5ツール）
+#### アセット管理ツール（4ツール）
 - **refresh_assets**: アセットデータベースのリフレッシュ
 - **save_project**: プロジェクトとアセットの保存
 - **find_assets**: フィルターによるアセット検索
 - **get_asset_info**: アセットの詳細情報取得
-- **reimport_asset**: 指定アセットの強制再インポート
 
 #### コンソールログツール（4ツール）
-- **get_console_logs**: Unity コンソールログの取得とフィルタリング（errorsOnlyバグ修正済み）
+- **get_console_logs**: Unity コンソールログの取得とフィルタリング
 - **clear_console_logs**: コンソールログの全クリア
 - **log_to_console**: カスタムメッセージのコンソール出力
 - **get_log_statistics**: ログ統計情報の取得
 
-#### テスト実行ツール（3ツール・高度なPlayMode最適化搭載）
+#### テスト実行ツール（3ツール）
 - **run_edit_mode_tests**: EditModeテストの実行と結果取得（標準実行）
-- **run_play_mode_tests**: PlayModeテストの高速実行（ドメインリロード制御付き）
+- **run_play_mode_tests**: PlayModeテストの実行（ドメインリロード制御付き）
 - **get_available_tests**: 利用可能なテスト一覧の取得（モード別フィルタリング対応）
 
 #### エディタ拡張ツール（1ツール）
 - **execute_editor_method**: コンパイル済みエディタ拡張の静的メソッドを実行
 
-#### ドキュメント検索ツール（2ツール・並列処理専用）
-- **search_documentation**: Unity公式ドキュメント（Manual/ScriptReference）の高速検索
-- **rebuild_documentation_index**: 並列処理によるドキュメントインデックスの高速再構築
+#### ドキュメント検索ツール（2ツール）
+- **search_documentation**: Unity公式ドキュメント（Manual/ScriptReference）の検索
+- **rebuild_documentation_index**: ドキュメントインデックスの再構築
 
-#### ビルド管理ツール（4ツール・NEW!）
+#### ビルド管理ツール（4ツール）
 - **get_build_status**: 現在のビルド状態と最後のビルド結果を取得
 - **wait_for_build_completion**: ビルドの完了を待機して結果を返す
 - **get_last_build_log**: 最後のビルドの詳細ログを取得
 - **clear_build_cache**: ビルドキャッシュをクリアして次回フルビルドを強制
 
-#### ワークフロー提案ツール（2ツール・NEW!）
+#### ワークフロー提案ツール（2ツール）
 - **get_next_action_suggestions**: 現在の状態から推奨される次のMCPツール実行を提案
 - **get_workflow_patterns**: Markdownファイルから読み込んだワークフローパターンを取得
 
@@ -182,13 +181,13 @@ var sortedCandidates = candidateScores
 - `finally`ブロックでの確実な設定リストア
 - コンパイル状態とPlay Mode状態の事前チェック
 
-### Markdownワークフローシステム（NEW!）
-**コンテキスト対応のインテリジェントワークフロー提案**
+### Markdownワークフローシステム
+**コンテキスト対応のワークフロー提案**
 - **Markdownベース定義**: 開発者が簡単に編集可能な`.md`ファイルでワークフロー定義
 - **動的提案システム**: 実行したツールと作業コンテキストに基づく次アクション提案
 - **4つの組み込みワークフロー**: エディタ拡張開発、エラー調査、テスト実行、アセット管理
 - **トリガーシステム**: ツール実行後の自動推奨とキーワードベースマッチング
-- **パラメータ付き実行**: 各ステップに最適なパラメータを自動設定
+- **パラメータ付き実行**: 各ステップに適切なパラメータを自動設定
 
 **実装技術:**
 - `WorkflowMarkdownParser`: .mdファイルの構造化パース
@@ -205,7 +204,7 @@ var sortedCandidates = candidateScores
 
 ## パッケージ構造
 
-**パッケージルート: `Assets/uMcp/` または `Packages/com.umcp.unity-mcp-server/`**
+**パッケージルート: `Assets/uMcp/` または `Packages/com.yoshi32a.unity-mcp-server/`**
 
 ```
 Assets/uMcp/
@@ -223,13 +222,13 @@ Assets/uMcp/
 │   │   └── UMcpSettings.cs      # 設定管理
 │   ├── Tools/                   # ビルトインツール実装（25ツール）
 │   │   ├── UnityInfo/           # Unity情報ツール（5ツール）
-│   │   ├── AssetManagement/     # アセット管理ツール（5ツール）
+│   │   ├── AssetManagement/     # アセット管理ツール（4ツール）
 │   │   ├── ConsoleLog/          # コンソールログツール（4ツール）
 │   │   ├── TestRunner/          # テスト実行ツール（3ツール）
 │   │   ├── EditorExtension/     # エディタ拡張ツール（1ツール）
-│   │   └── ToolWorkflow/        # ワークフロー提案ツール（2ツール・NEW!）
+│   │   └── ToolWorkflow/        # ワークフロー提案ツール（2ツール）
 │   └── Attributes/              # カスタム属性
-├── Workflows/                   # Markdownワークフロー定義（NEW!）
+├── Workflows/                   # Markdownワークフロー定義
 │   ├── editor-extension-workflow.md
 │   ├── error-investigation-workflow.md
 │   └── workflow-triggers.md
@@ -244,8 +243,8 @@ Assets/uMcp/
 ## インストールと使用方法
 
 ### パッケージインストール
-1. **Package Manager**: Git URL `https://github.com/your-repo/unity-mcp-server.git`
-2. **Manual**: `Assets/uMcp/`を`Packages/com.umcp.unity-mcp-server/`にコピー
+1. **Package Manager**: Git URL `https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp`
+2. **Manual**: `Assets/uMcp/`を`Packages/com.yoshi32a.unity-mcp-server/`にコピー
 
 ### 基本使用手順
 1. **ツールアセット作成**: `Tools > uMCP > Create Default Tool Assets`
@@ -256,7 +255,7 @@ Assets/uMcp/
 
 ### パフォーマンス考慮
 - **メインスレッド同期**: 全Unity API呼び出しで`await UniTask.SwitchToMainThread()`必須
-- **適切なリソース管理**: アセンブリリロード時の自動クリーンアップ
+- **リソース管理**: アセンブリリロード時の自動クリーンアップ
 - **タイムアウト処理**: 長時間実行の回避
 
 ### ビルトインツール登録ガイドライン

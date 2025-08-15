@@ -129,9 +129,22 @@ var sortedCandidates = candidateScores
 - **search_documentation**: Unity公式ドキュメント（Manual/ScriptReference）の高速検索
 - **rebuild_documentation_index**: 並列処理によるドキュメントインデックスの高速再構築
 
+#### ビルド管理ツール（4ツール・NEW!）
+- **get_build_status**: 現在のビルド状態と最後のビルド結果を取得
+- **wait_for_build_completion**: ビルドの完了を待機して結果を返す
+- **get_last_build_log**: 最後のビルドの詳細ログを取得
+- **clear_build_cache**: ビルドキャッシュをクリアして次回フルビルドを強制
+
 #### ワークフロー提案ツール（2ツール・NEW!）
 - **get_next_action_suggestions**: 現在の状態から推奨される次のMCPツール実行を提案
 - **get_workflow_patterns**: Markdownファイルから読み込んだワークフローパターンを取得
+
+**ビルド管理技術実装:**
+- **静的ビルドレポート管理**: `BuildReport lastBuildReport`でビルド結果の永続化
+- **ビルド状態トラッキング**: `bool isBuildInProgress`でリアルタイム状態監視
+- **プラットフォーム横断対応**: 全ビルドターゲット（Windows, Mac, Linux, Mobile等）対応
+- **キャッシュ管理**: `Library/BuildCache`と`Library/il2cpp_cache`の自動クリア機能
+- **詳細ログ出力**: ビルドステップ、エラー、警告の構造化レポート生成
 
 **PlayModeテスト技術実装:**
 - `EditorSettings.enterPlayModeOptionsEnabled`と`EnterPlayModeOptions`の制御
@@ -216,6 +229,12 @@ Assets/uMcp/
 - **メインスレッド同期**: 全Unity API呼び出しで`await UniTask.SwitchToMainThread()`必須
 - **適切なリソース管理**: アセンブリリロード時の自動クリーンアップ
 - **タイムアウト処理**: 長時間実行の回避
+
+### ビルトインツール登録ガイドライン
+- **UMcpServer.csでの登録必須**: 新しいツール実装クラスは`UMcpServer.cs`のビルトインツールリストに手動追加が必要
+- **登録忘れ防止**: ツール作成後は必ずMCPサーバー再起動してツール一覧に表示されることを確認
+- **静的インスタンス管理**: ツール実装クラスは静的フィールドでBuildReportなどの状態管理を行う
+- **適切なライフサイクル**: アセンブリリロード時の状態リセットを考慮した設計
 
 ### カスタムツール開発ガイドライン  
 - `UMcpToolBuilder`継承でScriptableObject作成

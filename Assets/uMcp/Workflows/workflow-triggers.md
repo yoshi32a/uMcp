@@ -21,6 +21,16 @@
 - 推奨: get_console_logs (高) - テスト結果確認
 - 条件: テストが失敗した場合
 
+#### get_build_status 実行後
+- 推奨: get_last_build_log (中) - ビルド詳細確認
+- 推奨: wait_for_build_completion (中) - ビルド進行中の場合
+- 条件: ビルドエラーが検出された場合
+
+#### clear_build_cache 実行後
+- 推奨: wait_for_build_completion (高) - 次回ビルド完了待機
+- 推奨: get_build_status (中) - キャッシュクリア効果確認
+- 条件: 常に
+
 ### コンテキストベーストリガー
 
 #### キーワード: "test", "テスト"
@@ -41,7 +51,7 @@
 - ツール候補:
   - find_assets
   - get_asset_info
-  - reimport_asset
+  - refresh_assets
 
 #### キーワード: "scene", "シーン", "GameObject"
 - ツール候補:
@@ -60,6 +70,14 @@
 - ツール候補:
   - search_documentation
   - get_unity_info
+
+#### キーワード: "build", "ビルド", "compile", "コンパイル"
+- 推奨ワークフロー: build-management-workflow.md
+- ツール候補:
+  - get_build_status
+  - get_last_build_log
+  - wait_for_build_completion
+  - clear_build_cache
 
 ## 連鎖ルール
 

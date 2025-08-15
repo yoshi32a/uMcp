@@ -124,7 +124,7 @@ var sortedCandidates = candidateScores
 
 ## MCPサーバー機能
 
-### ビルトインツールセット（全21ツール）
+### ビルトインツールセット（全25ツール）
 
 #### Unity情報ツール（5ツール）
 - **get_unity_info**: Unity エディターとプロジェクトの詳細情報
@@ -221,7 +221,7 @@ Assets/uMcp/
 │   │   └── UMcpToolBuilder.cs   # ツール基底クラス
 │   ├── Settings/
 │   │   └── UMcpSettings.cs      # 設定管理
-│   ├── Tools/                   # ビルトインツール実装（21ツール）
+│   ├── Tools/                   # ビルトインツール実装（25ツール）
 │   │   ├── UnityInfo/           # Unity情報ツール（5ツール）
 │   │   ├── AssetManagement/     # アセット管理ツール（5ツール）
 │   │   ├── ConsoleLog/          # コンソールログツール（4ツール）

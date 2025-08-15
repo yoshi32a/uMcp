@@ -10,16 +10,18 @@ AIアシスタントがUnityプロジェクトとリアルタイムでやり取�
 - **リアルタイム** Unity プロジェクト操作
 - **カスタムツール** ScriptableObject統合フレームワーク
 
-### 🛠️ ビルトインツール (21個)
+### 🛠️ ビルトインツール (25個)
 
-| カテゴリ | ツール | 主要機能 |
-|----------|-------|----------|
-| **Unity情報** | `get_unity_info`, `get_scene_info`, `get_hierarchy_analysis`, `get_game_object_info`, `get_prefab_info` | エディタ詳細、シーン分析、オブジェクト詳細 |
-| **アセット管理** | `refresh_assets`, `save_project`, `find_assets`, `get_asset_info` | 完全なアセットライフサイクル管理 |
-| **コンソールログ** | `get_console_logs`, `clear_console_logs`, `log_to_console`, `get_log_statistics` | ログ管理と分析 |
-| **テスト実行** | `run_edit_mode_tests`, `run_play_mode_tests`, `get_available_tests` | 最適化されたテスト実行 |
-| **エディタ拡張** | `execute_editor_method` | カスタムメソッド実行 |
-| **ワークフロー** | `get_next_action_suggestions`, `get_workflow_patterns` | インテリジェントな提案システム |
+| カテゴリ | ツール数 | 主要ツール | 主要機能 |
+|----------|----------|------------|----------|
+| **Unity情報** | 5個 | `get_unity_info`, `get_scene_info`, `get_hierarchy_analysis`, `get_game_object_info`, `get_prefab_info` | エディタ詳細、シーン分析、オブジェクト詳細 |
+| **アセット管理** | 4個 | `refresh_assets`, `save_project`, `find_assets`, `get_asset_info` | 完全なアセットライフサイクル管理 |
+| **ビルド管理** | 4個 | `get_build_status`, `wait_for_build_completion`, `get_last_build_log`, `clear_build_cache` | ビルド状態監視と管理 |
+| **コンソールログ** | 4個 | `get_console_logs`, `clear_console_logs`, `log_to_console`, `get_log_statistics` | ログ管理と分析 |
+| **テスト実行** | 3個 | `run_edit_mode_tests`, `run_play_mode_tests`, `get_available_tests` | 最適化されたテスト実行 |
+| **ドキュメント検索** | 2個 | `search_documentation`, `rebuild_documentation_index` | Unity公式ドキュメント高速検索 |
+| **ワークフロー** | 2個 | `get_next_action_suggestions`, `get_workflow_patterns` | インテリジェントな提案システム |
+| **エディタ拡張** | 1個 | `execute_editor_method` | カスタムメソッド実行 |
 
 ## インストール
 

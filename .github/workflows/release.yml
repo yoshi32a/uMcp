@@ -131,35 +131,16 @@ jobs:
         
         $(cat version_changelog.md)
         
-        ## 📦 インストール方法
+        ## 📦 インストール
         
-        ### 方法1: 手動インストール
-        1. \`com.umcp.unity-mcp-server-$VERSION.tgz\` をダウンロード
-        2. Unity プロジェクトの \`Assets\` フォルダに展開
-        
-        ### 方法2: Unity Package Manager (ローカル)
-        1. \`com.umcp.unity-mcp-server-$VERSION-upm.tgz\` をダウンロード
-        2. Unity プロジェクトの \`Packages\` フォルダに展開
-        
-        ### 方法3: Unity Package Manager (直接)
-        1. \`com.umcp.unity-mcp-server-$VERSION-upm.tgz\` を任意の場所にダウンロード
-        2. Unity でPackage Manager を開く
-        3. "+" → "Add package from tarball..." をクリック
-        4. ダウンロードした .tgz ファイルを選択
-        
-        ### 方法4: Git URL（推奨）
-        Package Manager で以下のURLを追加:
+        **Git URL（推奨）:**
         \`\`\`
         https://github.com/${{ github.repository }}.git?path=Assets/uMcp#$TAG_NAME
         \`\`\`
         
-        ## 📋 動作要件
-        - Unity 2022.3 LTS 以降
-        - UniTask 2.3.3 以降
+        **手動インストール:** 下記のファイルをダウンロードして Unity プロジェクトに展開
         
-        ## 📖 詳細情報
-        - [完全ドキュメント](https://github.com/${{ github.repository }}/blob/$TAG_NAME/Assets/uMcp/README.md)
-        - [変更履歴](https://github.com/${{ github.repository }}/blob/$TAG_NAME/Assets/uMcp/CHANGELOG.md)
+        **詳細:** [README.md](https://github.com/${{ github.repository }}/blob/$TAG_NAME/Assets/uMcp/README.md)
         EOF
         
     - name: Create Release

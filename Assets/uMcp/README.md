@@ -26,10 +26,10 @@ AIアシスタントがUnityプロジェクトとリアルタイムでやり取�
 ## インストール
 
 ### 前提条件
-Unity Package Manager (`+` → `Add package from git URL`) で以下の依存関係をインストール:
+以下の依存関係をインストール:
 
-1. **UniTask**: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
-2. **System.Text.Json**: Unity 2022.3以降では組み込み済み
+1. **UniTask**: Package Manager → `+` → `Add package from git URL` → `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
+2. **System.Text.Json**: NugetForUnity経由でインストール（プロジェクトに含まれるpackages.configを参照）
 
 ### Unity MCP Server のインストール
 

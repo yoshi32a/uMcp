@@ -171,7 +171,6 @@ jobs:
         
         ## 📖 詳細情報
         - [完全ドキュメント](https://github.com/${{ github.repository }}/blob/$TAG_NAME/Assets/uMcp/README.md)
-        - [日本語ドキュメント](https://github.com/${{ github.repository }}/blob/$TAG_NAME/README_ja.md)
         - [変更履歴](https://github.com/${{ github.repository }}/blob/$TAG_NAME/Assets/uMcp/CHANGELOG.md)
         EOF
         

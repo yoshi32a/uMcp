@@ -9,7 +9,6 @@ Unity MCP Server は Unity Editor 内で動作する完全なMCPサーバー実�
 ## ドキュメント
 
 - [完全ドキュメント](Assets/uMcp/README.md)
-- [日本語ドキュメント](README_ja.md)
 
 ## クイックスタート
 

@@ -1,6 +1,6 @@
 # MIT License
 
-Copyright (c) 2024 Unity MCP Server Team
+Copyright (c) 2024 yoshi32a
 
 以下に定める条件に従い、本ソフトウェアおよび関連文書のファイル（以下「ソフトウェア」）の複製を取得するすべての人に対し、ソフトウェアを無制限に扱うことを無償で許可します。これには、ソフトウェアの複製を使用、複写、変更、結合、掲載、頒布、サブライセンス、および/または販売する権利、およびソフトウェアを提供する相手に同じことを許可する権利も無制限に含まれます。
 
@@ -16,16 +16,4 @@ Copyright (c) 2024 Unity MCP Server Team
 このプロジェクトは、MITライセンスの下でライセンスされているUniTaskを使用しています。
 Copyright (c) 2019 Yoshifumi Kawai / Cysharp, Inc.
 
-### ModelContextProtocol
-このプロジェクトは、Model Context Protocol仕様を実装しています。
-詳細情報については、以下をご覧ください: https://github.com/modelcontextprotocol
 
-
-
----
-
-## 表示
-
-このソフトウェアを使用する際は、ドキュメントに以下の表示を含めてください：
-
-「このプロジェクトは、UnityのためのオープンソースModel Context Protocol実装であるUnity MCP Serverを使用しています。」

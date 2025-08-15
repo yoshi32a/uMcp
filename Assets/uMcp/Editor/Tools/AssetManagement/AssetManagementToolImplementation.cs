@@ -267,69 +267,6 @@ namespace uMCP.Editor.Tools
             };
         }
 
-        /// <summary>アセットを再インポート</summary>
-        [McpServerTool, Description("指定したアセットを強制再インポート")]
-        public async ValueTask<object> ReimportAsset([Description("再インポートするアセットのパス")] string assetPath)
-        {
-            await UniTask.SwitchToMainThread();
-
-            if (string.IsNullOrEmpty(assetPath))
-            {
-                return new ErrorResponse
-                {
-                    Success = false,
-                    Error = "Asset path is required"
-                };
-            }
-
-            if (!AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath))
-            {
-                return new ErrorResponse
-                {
-                    Success = false,
-                    Error = $"Asset not found at path: {assetPath}"
-                };
-            }
-
-            var startTime = DateTime.Now;
-            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
-            var duration = (DateTime.Now - startTime).TotalMilliseconds;
-
-            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
-            var info = new System.Text.StringBuilder();
-            info.AppendLine($"=== アセット再インポート: {(asset ? asset.name : Path.GetFileNameWithoutExtension(assetPath))} ===");
-            info.AppendLine($"**パス:** {assetPath}");
-            info.AppendLine($"**実行時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            info.AppendLine($"**処理時間:** {duration:F2}ms");
-            info.AppendLine();
-            
-            var icon = asset?.GetType().Name switch
-            {
-                "SceneAsset" => "🎬",
-                "Material" => "🎨",
-                "Texture2D" => "🖼️",
-                "AudioClip" => "🔊",
-                "MonoScript" => "📜",
-                "Shader" => "✨",
-                "Mesh" => "📐",
-                _ => "📄"
-            };
-            
-            info.AppendLine("## ✅ 実行結果");
-            info.AppendLine($"{icon} **アセットの再インポートが正常に完了しました**");
-            info.AppendLine();
-            info.AppendLine("## 💡 効果");
-            info.AppendLine("- インポート設定の強制再適用");
-            info.AppendLine("- メタデータの再生成");
-            info.AppendLine("- 依存関係の再構築");
-            info.AppendLine("- キャッシュのクリア");
-
-            return new
-            {
-                Success = true,
-                FormattedOutput = info.ToString()
-            };
-        }
 
         /// <summary>ファイルサイズを読みやすい形式にフォーマット</summary>
         string FormatFileSize(long bytes)

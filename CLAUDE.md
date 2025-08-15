@@ -276,6 +276,36 @@ Assets/uMcp/
 - **サーバー状態確認**: `Tools > uMCP > Show Server Info`
 - **ポート競合**: デフォルト49001番ポートが使用中の場合は設定変更
 
+### リリース管理とバージョニング
+
+**重要：新バージョンリリース時は必ずGitタグを作成すること**
+
+#### リリース手順（必須）
+1. **バージョン更新**：
+   ```bash
+   # package.jsonのバージョンを更新 (例: "1.0.1" -> "1.0.2")
+   # CHANGELOG.mdに新バージョンエントリを追加
+   ```
+
+2. **変更をコミット**：
+   ```bash
+   git add Assets/uMcp/package.json Assets/uMcp/CHANGELOG.md
+   git commit -m "release: v1.0.2 - 変更内容の要約"
+   git push
+   ```
+
+3. **タグ作成（必須）**：
+   ```bash
+   git tag v1.0.2 -m "Release v1.0.2: 変更内容の詳細説明"
+   git push origin v1.0.2
+   ```
+
+**タグ作成の重要性:**
+- **Unity Package Manager**: 特定バージョン指定インストール `#v1.0.2`
+- **リリース履歴**: GitHub Releasesページでの正式リリース管理
+- **後方互換性**: 旧バージョンへの安全な戻し
+- **セマンティックバージョニング**: patch/minor/majorバージョン管理
+
 ### PlayModeテスト実装ガイドライン
 
 #### 必須実装パターン

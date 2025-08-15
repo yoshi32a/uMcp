@@ -1,102 +1,123 @@
 # Unity MCP Server
 
-A powerful Model Context Protocol (MCP) server implementation for Unity Editor that enables AI assistants to interact with Unity projects in real-time.
+AIアシスタントがUnityプロジェクトとリアルタイムでやり取りできる強力なModel Context Protocol (MCP) サーバー実装です。
 
-## Features
+## 機能
 
-### 🚀 Core MCP Server
-- **HTTP + JSON-RPC 2.0** protocol on `127.0.0.1:49001/umcp/`
-- **Auto-start** with Unity Editor
-- **Real-time** Unity project interaction
-- **Custom tool** framework with ScriptableObject integration
+### 🚀 コアMCPサーバー
+- **HTTP + JSON-RPC 2.0** プロトコル `127.0.0.1:49001/umcp/` で動作
+- **自動起動** Unity Editor と連携
+- **リアルタイム** Unity プロジェクト操作
+- **カスタムツール** ScriptableObject統合フレームワーク
 
-### 🛠️ Built-in Tools (17 total)
+### 🛠️ ビルトインツール (21個)
 
-| Category | Tools | Key Features |
-|----------|-------|-------------|
-| **Unity Info** | `get_unity_info`, `get_scene_info` | Editor details, scene analysis |
-| **Asset Management** | `refresh_assets`, `save_project`, `find_assets`, `get_asset_info`, `reimport_asset` | Complete asset lifecycle |
-| **Console Logs** | `get_console_logs`, `clear_console_logs`, `log_to_console`, `get_log_statistics` | Log management & analytics |
-| **Test Runner** | `run_edit_mode_tests`, `run_play_mode_tests`, `get_available_tests` | Optimized test execution |
+| カテゴリ | ツール | 主要機能 |
+|----------|-------|----------|
+| **Unity情報** | `get_unity_info`, `get_scene_info`, `get_hierarchy_analysis`, `get_game_object_info`, `get_prefab_info` | エディタ詳細、シーン分析、オブジェクト詳細 |
+| **アセット管理** | `refresh_assets`, `save_project`, `find_assets`, `get_asset_info` | 完全なアセットライフサイクル管理 |
+| **コンソールログ** | `get_console_logs`, `clear_console_logs`, `log_to_console`, `get_log_statistics` | ログ管理と分析 |
+| **テスト実行** | `run_edit_mode_tests`, `run_play_mode_tests`, `get_available_tests` | 最適化されたテスト実行 |
+| **エディタ拡張** | `execute_editor_method` | カスタムメソッド実行 |
+| **ワークフロー** | `get_next_action_suggestions`, `get_workflow_patterns` | インテリジェントな提案システム |
 
-## Installation
+## インストール
 
-### Prerequisites
-Install these dependencies via Unity Package Manager (`+` → `Add package from git URL`):
+### 前提条件
+Unity Package Manager (`+` → `Add package from git URL`) で以下の依存関係をインストール:
 
 1. **UniTask**: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
-2. **NuGetForUnity**: `https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
-3. **System.Text.Json**: Search in `NuGet → Manage NuGet Packages` → Install v9.0.7+
+2. **System.Text.Json**: Unity 2022.3以降では組み込み済み
 
-### Install Unity MCP Server
+### Unity MCP Server のインストール
 
-**Via Package Manager (Recommended):**
+**Package Manager 経由 (推奨):**
 ```
 https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp
 ```
 
-**Alternative methods:**
-- **Manual**: Download from [Releases](https://github.com/yoshi32a/uMcp/releases) → Extract to `Assets/` or `Packages/`
-- **UnityPackage**: Download `.unitypackage` from [Releases](https://github.com/yoshi32a/uMcp/releases) → Import via Unity
+**その他の方法:**
+- **手動**: [Releases](https://github.com/yoshi32a/uMcp/releases) からダウンロード → `Assets/` または `Packages/` に展開
+- **UnityPackage**: [Releases](https://github.com/yoshi32a/uMcp/releases) から `.unitypackage` をダウンロード → Unity でインポート
 
-## Quick Start
+## クイックスタート
 
-1. **Auto-start Server**: Server starts automatically when Unity loads
-2. **Manual Control**: Use `Tools > uMCP` menu for server management
-3. **Create Tool Assets**: Run `Tools > uMCP > Create Default Tool Assets`
-4. **Test Connection**: Connect MCP Inspector to `http://127.0.0.1:49001/umcp/`
+1. **サーバー自動起動**: Unity ロード時に自動でサーバーが起動
+2. **手動制御**: `Tools > uMCP` メニューでサーバー管理
+3. **ツールアセット作成**: `Tools > uMCP > Create Default Tool Assets` を実行
+4. **接続テスト**: MCPクライアントを `http://127.0.0.1:49001/umcp/` に接続
 
-## Usage
+## 使用方法
 
-### Configuration
-Access settings via `Tools > uMCP > Open Settings`:
-- **Server**: `127.0.0.1:49001/umcp/` (default)
-- **Auto Start**: Automatic server startup
-- **Debug Mode**: Request/response logging
-- **CORS**: Web client support
+### 設定
+`Tools > uMCP > Open Settings` で設定にアクセス:
+- **サーバー**: `127.0.0.1:49001/umcp/` (デフォルト)
+- **自動起動**: 自動サーバー起動
+- **デバッグモード**: リクエスト/レスポンスのログ出力
+- **CORS**: Webクライアント対応
 
-### Connect MCP Clients
+### MCPクライアント接続
 
-| Client | Connection |
-|--------|------------|
+| クライアント | 接続方法 |
+|-------------|----------|
 | **MCP Inspector** | [inspector.mcp.run](https://inspector.mcp.run/) → HTTP → `http://127.0.0.1:49001/umcp/` |
 | **Claude CLI** | `claude mcp add -s project --transport http unity-mcp-server http://127.0.0.1:49001/umcp/` |
-| **Custom Client** | HTTP POST to `http://127.0.0.1:49001/umcp/` with JSON-RPC 2.0 |
+| **カスタムクライアント** | `http://127.0.0.1:49001/umcp/` へ JSON-RPC 2.0 で HTTP POST |
 
-## Development
+## 開発
 
-### Custom Tools
-Create ScriptableObject-based tools with attribute-driven registration:
+### カスタムツール
+属性駆動登録でScriptableObjectベースツールを作成:
 
 ```csharp
-[McpServerToolType, Description("My custom tool")]
+[McpServerToolType, Description("私のカスタムツール")]
 internal sealed class MyCustomToolImplementation
 {
-    [McpServerTool, Description("Do something custom")]
-    public async ValueTask<object> DoSomething([Description("Input parameter")] string input = "default")
+    [McpServerTool, Description("カスタム処理を実行")]
+    public async ValueTask<StandardResponse> DoSomething(
+        [Description("入力パラメータ")] string input = "default")
     {
-        await UniTask.SwitchToMainThread(); // Required for Unity API access
-        return new { success = true, message = $"Processed: {input}" };
+        await UniTask.SwitchToMainThread(); // Unity API アクセスに必須
+        return new StandardResponse 
+        { 
+            Success = true, 
+            FormattedOutput = $"処理完了: {input}" 
+        };
     }
 }
 ```
 
-**Key Points:**
-- Use `await UniTask.SwitchToMainThread()` before Unity API calls
-- Add `[Description]` for better MCP client integration
-- Return serializable objects (records, anonymous types, POCOs)
+**重要なポイント:**
+- Unity API呼び出し前に `await UniTask.SwitchToMainThread()` を使用
+- MCPクライアント統合のため `[Description]` を追加
+- 統一された `StandardResponse` クラスを使用
+- シリアライゼーション可能なオブジェクトを返す
 
-## Requirements
+### レスポンス統一化
+全ツールで統一された `StandardResponse` クラスを使用:
 
-- **Unity 6000.0+** (Unity 6 or later)
-- **UniTask 2.3.3+** (async processing)
-- **System.Text.Json 9.0.7+** (JSON serialization)
+```csharp
+public class StandardResponse
+{
+    public bool Success { get; set; }
+    [JsonPropertyName("formatted_output")]
+    public string FormattedOutput { get; set; }
+    public string Error { get; set; }
+    public string Message { get; set; }
+}
+```
 
-## License
+## システム要件
 
-MIT License - see [LICENSE](LICENSE) for details.
+- **Unity 2022.3 LTS** 以降
+- **UniTask 2.3.3+** (非同期処理)
+- **System.Text.Json 9.0.7+** (JSON シリアライゼーション)
 
-## Support
+## ライセンス
 
-- **Issues**: [GitHub Issues](https://github.com/yoshi32a/uMcp/issues)
-- **Reference**: [Unity Natural MCP](https://github.com/johniwasz/unity-natural-mcp)
+MIT License - 詳細は [LICENSE](LICENSE) をご覧ください。
+
+## サポート
+
+- **問題報告**: [GitHub Issues](https://github.com/yoshi32a/uMcp/issues)
+- **参考**: [Unity Natural MCP](https://github.com/johniwasz/unity-natural-mcp)

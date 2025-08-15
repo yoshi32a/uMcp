@@ -288,6 +288,4 @@ Assets/uMcp/
 
 ## 謝辞
 
-- [Unity Natural MCP](https://github.com/notargs/UnityNaturalMCP)にインスパイア
 - [UniTask](https://github.com/Cysharp/UniTask)で構築
-- [Model Context Protocol](https://github.com/modelcontextprotocol)を実装

@@ -1,83 +1,83 @@
 # Unity MCP Server
 
-A powerful Model Context Protocol (MCP) server implementation for Unity Editor that enables AI assistants to interact with Unity projects in real-time with intelligent workflow guidance.
+UnityエディターでAIアシスタントがUnityプロジェクトとリアルタイムでやり取りできる強力なModel Context Protocol (MCP) サーバー実装です。インテリジェントなワークフローガイダンス機能を搭載しています。
 
-## Overview
+## 概要
 
-Unity MCP Server provides a complete MCP server implementation that runs inside Unity Editor, allowing AI assistants like Claude to directly interact with your Unity projects. Features **21 built-in tools**, **Markdown-based workflow system**, and **intelligent action suggestions** for asset management, console logs, test execution, project analysis, and context-aware development workflows.
+Unity MCP Server は Unity Editor 内で動作する完全なMCPサーバー実装を提供し、ClaudeなどのAIアシスタントがUnityプロジェクトと直接やり取りできるようにします。アセット管理、コンソールログ、テスト実行、プロジェクト分析、コンテキスト対応開発ワークフロー用の**21個のビルトインツール**、**Markdownベースワークフローシステム**、**インテリジェントなアクション提案**を特徴とします。
 
-## Documentation
+## ドキュメント
 
-- [English Documentation](Assets/uMcp/README.md)
+- [完全ドキュメント](Assets/uMcp/README.md)
 - [日本語ドキュメント](README_ja.md)
 
-## Quick Start
+## クイックスタート
 
-### Prerequisites
+### 前提条件
 
-1. **Unity 2022.3 LTS** or later
-2. **UniTask** - Install via Package Manager: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
+1. **Unity 2022.3 LTS** 以降
+2. **UniTask** - Package Manager経由でインストール: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
 
-### Installation
+### インストール
 
 ```
 https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp
 ```
 
-Add the above URL in Unity Package Manager.
+上記URLをUnity Package Managerに追加してください。
 
-## Features
+## 機能
 
-- 🚀 **HTTP Server** running on `localhost:49001/umcp/`
-- 🛠️ **21 Built-in Tools** across 6 categories for comprehensive Unity interaction
-- 🧠 **Markdown Workflow System** with intelligent action suggestions
-- ⚡ **Optimized PlayMode Tests** with domain reload control
-- 🔍 **Enhanced Error Detection** with corrected console log filtering
-- 📦 **Easy Integration** with auto-start functionality
-- 🔧 **Extensible Framework** for custom tools
+- 🚀 **HTTPサーバー** `localhost:49001/umcp/` で動作
+- 🛠️ **21個のビルトインツール** 6カテゴリでUnityとの包括的な連携
+- 🧠 **Markdownワークフローシステム** インテリジェントなアクション提案付き
+- ⚡ **最適化されたPlayModeテスト** ドメインリロード制御機能
+- 🔍 **強化されたエラー検出** 修正されたコンソールログフィルタリング
+- 📦 **簡単統合** 自動起動機能付き
+- 🔧 **拡張可能フレームワーク** カスタムツール対応
 
-### New in Latest Version
-- **🆕 Workflow Guidance**: Context-aware next-action suggestions
-- **📝 Markdown Workflows**: Easy-to-edit workflow definitions
-- **🎯 Smart Triggers**: Automatic tool chaining based on context
-- **🐛 Bug Fixes**: Resolved `get_console_logs` errorsOnly filtering issue
+### 最新版の新機能
+- **🆕 ワークフローガイダンス**: コンテキスト対応の次アクション提案
+- **📝 Markdownワークフロー**: 編集しやすいワークフロー定義
+- **🎯 スマートトリガー**: コンテキストベースの自動ツール連携
+- **🐛 バグ修正**: `get_console_logs` のerrorsOnlyフィルタリング問題を解決
 
-## License
+## ライセンス
 
-MIT License - see [LICENSE.md](LICENSE.md) for details.
+MIT License - 詳細は [LICENSE.md](LICENSE.md) をご覧ください。
 
-## Tool Categories
+## ツールカテゴリ
 
-### 🎯 Unity Information (5 tools)
-- Project analysis, scene inspection, GameObject details
+### 🎯 Unity情報 (5ツール)
+- プロジェクト分析、シーン検査、GameObjectの詳細
 
-### 📁 Asset Management (5 tools)  
-- Asset search, refresh, import management
+### 📁 アセット管理 (5ツール)  
+- アセット検索、リフレッシュ、インポート管理
 
-### 🐛 Console Logs (4 tools)
-- Log retrieval, filtering, statistics (with fixed errorsOnly bug)
+### 🐛 コンソールログ (4ツール)
+- ログ取得、フィルタリング、統計（errorsOnlyバグ修正済み）
 
-### 🧪 Test Execution (3 tools)
-- EditMode/PlayMode test running with domain reload optimization
+### 🧪 テスト実行 (3ツール)
+- ドメインリロード最適化付きEditMode/PlayModeテスト実行
 
-### ⚙️ Editor Extensions (1 tool)
-- Custom method execution for development automation
+### ⚙️ エディター拡張 (1ツール)
+- 開発自動化用カスタムメソッド実行
 
-### 🧠 Workflow Guidance (2 tools) **NEW!**
-- Intelligent next-action suggestions and Markdown workflow patterns
+### 🧠 ワークフローガイダンス (2ツール) **新機能！**
+- インテリジェントな次アクション提案とMarkdownワークフローパターン
 
-## Repository Structure
+## リポジトリ構造
 
 ```
 UnityMcpTest/
 ├── Assets/
-│   ├── uMcp/              # Unity MCP Server package
-│   │   ├── Editor/        # Core implementation (21 tools)
-│   │   ├── Workflows/     # Markdown workflow definitions
-│   │   ├── package.json   # Package manifest
-│   │   └── README.md      # Full documentation
-│   └── packages.config    # NuGet packages
-├── README.md              # This file (updated)
-├── README_ja.md           # Japanese documentation
-└── CLAUDE.md              # AI assistant instructions (updated)
+│   ├── uMcp/              # Unity MCP Serverパッケージ
+│   │   ├── Editor/        # コア実装（21ツール）
+│   │   ├── Workflows/     # Markdownワークフロー定義
+│   │   ├── package.json   # パッケージマニフェスト
+│   │   └── README.md      # 完全ドキュメント
+│   └── packages.config    # NuGetパッケージ
+├── README.md              # このファイル（更新済み）
+├── README_ja.md           # 日本語ドキュメント
+└── CLAUDE.md              # AIアシスタント指示書（更新済み）
 ```

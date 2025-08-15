@@ -1,113 +1,113 @@
-# Changelog
+# 変更履歴
 
-All notable changes to Unity MCP Server will be documented in this file.
+Unity MCP Serverのすべての重要な変更はこのファイルに記録されます。
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
+このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
 ## [1.0.1] - 2025-08-15
 
-### Fixed
-- **Response Standardization**: Replaced all anonymous classes with `StandardResponse` class across all tool implementations
-- **Type Safety**: Improved compile-time type checking by eliminating anonymous object returns
-- **JSON Serialization**: Enhanced System.Text.Json compatibility with consistent response structure
-- **Code Consistency**: Unified response format across all 21 built-in tools
+### 修正
+- **レスポンス標準化**: 全ツール実装で無名クラスを `StandardResponse` クラスに置き換え
+- **型安全性**: 無名オブジェクト戻り値を削除してコンパイル時型チェックを改善
+- **JSON シリアライゼーション**: 一貫したレスポンス構造でSystem.Text.Json互換性を強化
+- **コード一貫性**: 21個のビルトインツール全体でレスポンス形式を統一
 
-### Technical Improvements
-- Added `StandardResponse` class with proper JSON property naming for MCP protocol compliance
-- Converted Vector/Color anonymous objects to formatted string representations for better readability
-- Enhanced maintainability through standardized response patterns
-- Fixed compilation errors related to malformed anonymous class replacements
+### 技術的改善
+- MCPプロトコル準拠のために適切なJSONプロパティ命名を持つ `StandardResponse` クラスを追加
+- Vector/Color無名オブジェクトを可読性向上のためにフォーマットされた文字列表現に変換
+- 標準化されたレスポンスパターンによる保守性の向上
+- 不正な無名クラス置換に関連するコンパイルエラーを修正
 
 ## [1.0.0] - 2024-07-30
 
-### Added
-- Initial release of Unity MCP Server
-- Core MCP server implementation with HTTP transport
-- Auto-start functionality integrated with Unity Editor
-- Comprehensive tool system with 4 built-in tool categories
+### 追加
+- Unity MCP Serverの初回リリース
+- HTTP転送を使用したコアMCPサーバー実装
+- Unity Editorと統合された自動起動機能
+- 4つのビルトインツールカテゴリを持つ包括的ツールシステム
 
-#### Core Features
-- **HTTP Server**: Runs on configurable port (default: 49001)
-- **JSON-RPC 2.0**: Full Model Context Protocol compliance
-- **Real-time Communication**: Direct Unity Editor integration
-- **Error Handling**: Robust error handling with timeout support
-- **CORS Support**: Configurable CORS for web-based clients
+#### コア機能
+- **HTTPサーバー**: 設定可能なポート上で動作（デフォルト: 49001）
+- **JSON-RPC 2.0**: 完全なModel Context Protocol準拠
+- **リアルタイム通信**: Unity Editorの直接統合
+- **エラーハンドリング**: タイムアウトサポート付きの堅牢なエラー処理
+- **CORS サポート**: Webベースクライアント用の設定可能なCORS
 
-#### Built-in Tools
-- **Unity Information Tool**
-  - `get_unity_info`: Unity editor and project information
-  - `get_scene_info`: Current scene structure analysis
-  - `log_message`: Console logging with different levels
+#### ビルトインツール
+- **Unity情報ツール**
+  - `get_unity_info`: Unity エディターとプロジェクト情報
+  - `get_scene_info`: 現在のシーン構造分析
+  - `log_message`: 異なるレベルでのコンソールログ出力
 
-- **Asset Management Tool**
-  - `refresh_assets`: Asset database refresh
-  - `save_project`: Project and asset saving
-  - `find_assets`: Asset search with filtering
-  - `get_asset_info`: Detailed asset information
-  - `reimport_asset`: Force asset reimport
+- **アセット管理ツール**
+  - `refresh_assets`: アセットデータベースのリフレッシュ
+  - `save_project`: プロジェクトとアセットの保存
+  - `find_assets`: フィルタリング付きアセット検索
+  - `get_asset_info`: 詳細なアセット情報
+  - `reimport_asset`: アセットの強制再インポート
 
-- **Console Log Tool**
-  - `get_console_logs`: Retrieve console logs with filtering
-  - `clear_console_logs`: Clear all console logs
-  - `log_to_console`: Custom console output
-  - `get_log_statistics`: Console log statistics
+- **コンソールログツール**
+  - `get_console_logs`: フィルタリング付きコンソールログ取得
+  - `clear_console_logs`: すべてのコンソールログのクリア
+  - `log_to_console`: カスタムコンソール出力
+  - `get_log_statistics`: コンソールログ統計
 
-- **Test Runner Tool**
-  - `run_edit_mode_tests`: Execute EditMode tests
-  - `run_play_mode_tests`: Execute PlayMode tests
-  - `get_available_tests`: List available tests
+- **テストランナーツール**
+  - `run_edit_mode_tests`: EditModeテストの実行
+  - `run_play_mode_tests`: PlayModeテストの実行
+  - `get_available_tests`: 利用可能なテストの一覧
 
-#### Configuration & Management
-- **Unity Menu Integration**: `Tools > uMCP` menu
-- **Settings Management**: ProjectSettings integration
-- **Tool Asset Creation**: Automated tool asset management
-- **Debug Mode**: Detailed request/response logging
+#### 設定と管理
+- **Unity メニュー統合**: `Tools > uMCP` メニュー
+- **設定管理**: ProjectSettings統合
+- **ツールアセット作成**: 自動化されたツールアセット管理
+- **デバッグモード**: 詳細なリクエスト/レスポンスログ
 
-#### Developer Experience
-- **Custom Tool Framework**: Extensible tool creation system
-- **ScriptableObject Integration**: Unity-native tool configuration
-- **Automatic Discovery**: Dynamic tool loading
-- **Assembly Reload Handling**: Proper cleanup during code changes
+#### 開発者エクスペリエンス
+- **カスタムツールフレームワーク**: 拡張可能なツール作成システム
+- **ScriptableObject統合**: Unity ネイティブツール設定
+- **自動検出**: 動的ツール読み込み
+- **アセンブリリロード処理**: コード変更時の適切なクリーンアップ
 
-### Technical Details
-- **Unity Version**: Requires Unity 6000.0 or later
-- **Dependencies**: UniTask 2.3.3+, ModelContextProtocol 0.3.0+
-- **Architecture**: Modular design with clear separation of concerns
-- **Performance**: Optimized for Unity Editor performance
-- **Security**: Local-only server with configurable access
+### 技術詳細
+- **Unity バージョン**: Unity 6000.0 以降が必要
+- **依存関係**: UniTask 2.3.3+、ModelContextProtocol 0.3.0+
+- **アーキテクチャ**: 関心の明確な分離を持つモジュラー設計
+- **パフォーマンス**: Unity Editor のパフォーマンス最適化
+- **セキュリティ**: 設定可能なアクセスを持つローカル専用サーバー
 
-### Documentation
-- Comprehensive README with quick start guide
-- API documentation for all tools
-- Architecture overview
-- Troubleshooting guide
-- Custom tool development examples
+### ドキュメント
+- クイックスタートガイド付きの包括的なREADME
+- すべてのツールのAPIドキュメント
+- アーキテクチャ概要
+- トラブルシューティングガイド
+- カスタムツール開発例
 
-## [Unreleased]
+## [未リリース]
 
-### Planned Features
-- GameObject manipulation tools
-- Build automation tools  
-- Package Manager integration
-- Performance profiling tools
-- Scene management utilities
-- Custom inspector integrations
+### 予定機能
+- GameObject操作ツール
+- ビルド自動化ツール
+- Package Manager統合
+- パフォーマンスプロファイリングツール
+- シーン管理ユーティリティ
+- カスタムインスペクター統合
 
 ---
 
-## Development Notes
+## 開発ノート
 
-This project was inspired by [Unity Natural MCP](https://github.com/notargs/UnityNaturalMCP) and aims to provide a comprehensive, production-ready MCP server implementation for Unity development workflows.
+このプロジェクトは [Unity Natural MCP](https://github.com/notargs/UnityNaturalMCP) からインスピレーションを得て、Unity開発ワークフロー向けの包括的でプロダクション対応のMCPサーバー実装を提供することを目的としています。
 
-### Architecture Decisions
-- **HTTP over Stdio**: Chosen for better debugging and client compatibility
-- **ScriptableObject Tools**: Unity-native approach for tool configuration
-- **UniTask Integration**: Async/await support optimized for Unity
-- **Modular Design**: Easy to extend and maintain
+### アーキテクチャの決定
+- **HTTP over Stdio**: より良いデバッグとクライアント互換性のために選択
+- **ScriptableObject ツール**: ツール設定のためのUnityネイティブアプローチ
+- **UniTask 統合**: Unity向けに最適化されたasync/awaitサポート
+- **モジュラー設計**: 拡張と保守が容易
 
-### Performance Considerations
-- **Main Thread Switching**: All Unity API calls properly marshaled
-- **Resource Management**: Proper disposal of server resources
-- **Assembly Reload**: Graceful handling of code recompilation
-- **Error Recovery**: Robust error handling without editor crashes
+### パフォーマンスの考慮事項
+- **メインスレッド切り替え**: すべてのUnity API呼び出しを適切にマーシャリング
+- **リソース管理**: サーバーリソースの適切な破棄
+- **アセンブリリロード**: コード再コンパイルの優雅な処理
+- **エラー復旧**: エディタークラッシュなしの堅牢なエラーハンドリング

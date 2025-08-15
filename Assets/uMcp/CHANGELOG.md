@@ -5,6 +5,19 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [1.0.2] - 2025-08-15
+
+### Changed
+- **ドキュメント国際化**: プロジェクト全体のドキュメントを英語から日本語に統一
+- **package.json**: description フィールドを日本語に変更
+- **LICENSE.md**: MIT ライセンス全体を日本語版に変換
+- **CHANGELOG.md**: 全ての英語コンテンツを日本語に変換
+- **ワークフロー**: documentation-search-workflow.md タイトルを日本語に変更
+
+### Improved
+- **ユーザビリティ**: 日本語ユーザー向けの完全な日本語ドキュメント環境を提供
+- **保守性**: 一貫した言語によるドキュメント管理を実現
+
 ## [1.0.1] - 2025-08-15
 
 ### 修正

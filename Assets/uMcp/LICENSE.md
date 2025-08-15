@@ -20,9 +20,7 @@ Copyright (c) 2019 Yoshifumi Kawai / Cysharp, Inc.
 このプロジェクトは、Model Context Protocol仕様を実装しています。
 詳細情報については、以下をご覧ください: https://github.com/modelcontextprotocol
 
-### Unity Natural MCP（インスピレーション）
-このプロジェクトは、notargs氏のUnity Natural MCPからインスピレーションを得ています。
-リポジトリ: https://github.com/notargs/UnityNaturalMCP
+
 
 ---
 

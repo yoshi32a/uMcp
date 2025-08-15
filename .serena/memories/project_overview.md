@@ -1,7 +1,7 @@
 # Unity MCP Test プロジェクト概要
 
 ## プロジェクトの目的
-**Unity MCP Server** は、完全に実装されたModel Context Protocol (MCP) サーバーパッケージです。Unity Natural MCPを参考にしつつ、独自の改良を加えたUnity Editor統合MCPサーバーとして開発されました。
+**Unity MCP Server** は、完全に実装されたModel Context Protocol (MCP) サーバーパッケージです。Unity Editor統合MCPサーバーとして開発されました。
 
 ## 基本情報
 - **パッケージ名**: com.umcp.unity-mcp-server

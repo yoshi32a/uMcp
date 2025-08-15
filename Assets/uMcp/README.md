@@ -122,4 +122,3 @@ MIT License - 詳細は [LICENSE](LICENSE) をご覧ください。
 ## サポート
 
 - **問題報告**: [GitHub Issues](https://github.com/yoshi32a/uMcp/issues)
-- **参考**: [Unity Natural MCP](https://github.com/johniwasz/unity-natural-mcp)

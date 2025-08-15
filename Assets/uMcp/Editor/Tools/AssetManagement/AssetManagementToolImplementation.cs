@@ -38,7 +38,7 @@ namespace uMCP.Editor.Tools
             info.AppendLine("- 変更されたアセットのメタデータを更新");
             info.AppendLine("- インポート設定の変更を反映");
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -69,7 +69,7 @@ namespace uMCP.Editor.Tools
             info.AppendLine("- プロジェクト設定");
             info.AppendLine("- プレハブの変更");
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -162,7 +162,7 @@ namespace uMCP.Editor.Tools
                 summary.AppendLine("**該当するアセットが見つかりませんでした。**");
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = summary.ToString()
@@ -260,7 +260,7 @@ namespace uMCP.Editor.Tools
                 }
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()

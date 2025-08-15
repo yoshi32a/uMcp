@@ -182,7 +182,7 @@ namespace uMCP.Editor.Tools
                     summary.AppendLine("テストスクリプトの作成やTest Runnerの設定を確認してください。");
                 }
 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
                     FormattedOutput = summary.ToString()

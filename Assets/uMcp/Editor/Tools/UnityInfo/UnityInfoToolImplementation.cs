@@ -64,7 +64,7 @@ namespace uMCP.Editor.Tools
             info.AppendLine($"**GPU:** {SystemInfo.graphicsDeviceName}");
             info.AppendLine($"**GPU メモリ:** {SystemInfo.graphicsMemorySize} MB");
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -134,7 +134,7 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("**シーンは空です。**");
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -229,7 +229,7 @@ namespace uMCP.Editor.Tools
                 }
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -322,7 +322,7 @@ namespace uMCP.Editor.Tools
                 info.AppendLine($"{componentIcon} **{componentName}** {enabled}");
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -418,7 +418,7 @@ namespace uMCP.Editor.Tools
                 }
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -795,12 +795,12 @@ namespace uMCP.Editor.Tools
             if (valueType == typeof(Vector3))
             {
                 var v = (Vector3)value;
-                return new { x = v.x, y = v.y, z = v.z };
+                return $"({v.x:F2}, {v.y:F2}, {v.z:F2})";
             }
             if (valueType == typeof(Vector4))
             {
                 var v = (Vector4)value;
-                return new { x = v.x, y = v.y, z = v.z, w = v.w };
+                return $"({v.x:F2}, {v.y:F2}, {v.z:F2}, {v.w:F2})";
             }
 
             // Color
@@ -859,20 +859,13 @@ namespace uMCP.Editor.Tools
         /// <summary>Vector2を辞書形式に変換</summary>
         object FormatVector2(Vector2 vector)
         {
-            return new { x = vector.x, y = vector.y };
+            return $"({vector.x:F2}, {vector.y:F2})";
         }
 
         /// <summary>Colorを辞書形式に変換</summary>
         object FormatColor(Color color)
         {
-            return new 
-            { 
-                r = color.r, 
-                g = color.g, 
-                b = color.b, 
-                a = color.a,
-                hex = ColorUtility.ToHtmlStringRGBA(color)
-            };
+            return $"RGBA({color.r:F2}, {color.g:F2}, {color.b:F2}, {color.a:F2}) #{ColorUtility.ToHtmlStringRGBA(color)}";
         }
 
         /// <summary>UnityEngine.Object参照の状態を取得</summary>
@@ -880,13 +873,7 @@ namespace uMCP.Editor.Tools
         {
             if (obj == null) return "null";
             
-            return new
-            {
-                name = obj.name,
-                type = obj.GetType().Name,
-                instanceId = obj.GetInstanceID(),
-                status = "connected"
-            };
+            return $"{obj.name} ({obj.GetType().Name})";
         }
 
         /// <summary>階層構造を分析</summary>

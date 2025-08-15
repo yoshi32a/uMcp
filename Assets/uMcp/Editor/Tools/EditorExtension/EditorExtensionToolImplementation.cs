@@ -26,21 +26,21 @@ namespace uMCP.Editor.Tools
             {
                 if (string.IsNullOrEmpty(className))
                 {
-                    return new { success = false, error = "Class name is required" };
+                    return new StandardResponse { Success = false, Error = "Class name is required" };
                 }
 
                 if (string.IsNullOrEmpty(methodName))
                 {
-                    return new { success = false, error = "Method name is required" };
+                    return new StandardResponse { Success = false, Error = "Method name is required" };
                 }
 
                 // コンパイル状態をチェック
                 if (EditorApplication.isCompiling)
                 {
-                    return new { 
-                        success = false, 
-                        error = "Unity is currently compiling scripts. Please wait for compilation to complete and try again.",
-                        isCompiling = true
+                    return new StandardResponse
+                    { 
+                        Success = false, 
+                        Error = "Unity is currently compiling scripts. Please wait for compilation to complete and try again."
                     };
                 }
 
@@ -48,11 +48,24 @@ namespace uMCP.Editor.Tools
                 var compilationMessages = GetCompilationErrors();
                 if (compilationMessages.Length > 0)
                 {
-                    return new { 
-                        success = false, 
-                        error = "Compilation errors detected. Please fix the errors before executing methods.",
-                        compilationErrors = compilationMessages,
-                        errorCount = compilationMessages.Length
+                    var errorInfo = new System.Text.StringBuilder();
+                    errorInfo.AppendLine("=== コンパイルエラー検出 ===");
+                    errorInfo.AppendLine($"**エラー数:** {compilationMessages.Length}");
+                    errorInfo.AppendLine("**詳細:**");
+                    foreach (var error in compilationMessages.Take(5))
+                    {
+                        errorInfo.AppendLine($"- {error}");
+                    }
+                    if (compilationMessages.Length > 5)
+                    {
+                        errorInfo.AppendLine($"...他 {compilationMessages.Length - 5}件");
+                    }
+                    
+                    return new StandardResponse
+                    { 
+                        Success = false, 
+                        Error = "Compilation errors detected. Please fix the errors before executing methods.",
+                        FormattedOutput = errorInfo.ToString()
                     };
                 }
 
@@ -60,10 +73,19 @@ namespace uMCP.Editor.Tools
                 var type = GetTypeFromAllAssemblies(className);
                 if (type == null)
                 {
-                    return new { 
-                        success = false, 
-                        error = $"Class '{className}' not found. Make sure the script is compiled.",
-                        availableTypes = GetAvailableEditorTypes().Take(10).ToArray()
+                    var typeInfo = new System.Text.StringBuilder();
+                    typeInfo.AppendLine($"=== クラス '{className}' が見つかりません ===");
+                    typeInfo.AppendLine("**利用可能なエディタ型（上位10件）:**");
+                    foreach (var availableType in GetAvailableEditorTypes().Take(10))
+                    {
+                        typeInfo.AppendLine($"- {availableType}");
+                    }
+                    
+                    return new StandardResponse
+                    { 
+                        Success = false, 
+                        Error = $"Class '{className}' not found. Make sure the script is compiled.",
+                        FormattedOutput = typeInfo.ToString()
                     };
                 }
 
@@ -73,19 +95,21 @@ namespace uMCP.Editor.Tools
                 
                 if (method == null)
                 {
-                    return new { 
-                        success = false, 
-                        error = $"Method '{methodName}' not found in class '{className}'",
-                        availableMethods = methods.Select(m => new {
-                            name = m.Name,
-                            isStatic = m.IsStatic,
-                            parameters = m.GetParameters().Select(p => new { 
-                                name = p.Name, 
-                                type = p.ParameterType.Name,
-                                hasDefault = p.HasDefaultValue,
-                                defaultValue = p.HasDefaultValue ? p.DefaultValue : null
-                            }).ToArray()
-                        }).ToArray()
+                    var methodInfo = new System.Text.StringBuilder();
+                    methodInfo.AppendLine($"=== メソッド '{methodName}' が見つかりません ===");
+                    methodInfo.AppendLine($"**クラス:** {className}");
+                    methodInfo.AppendLine("**利用可能なメソッド:**");
+                    foreach (var m in methods.Take(10))
+                    {
+                        var paramStr = string.Join(", ", m.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}"));
+                        methodInfo.AppendLine($"- {(m.IsStatic ? "static " : "")}{m.Name}({paramStr})");
+                    }
+                    
+                    return new StandardResponse
+                    { 
+                        Success = false, 
+                        Error = $"Method '{methodName}' not found in class '{className}'",
+                        FormattedOutput = methodInfo.ToString()
                     };
                 }
 
@@ -176,22 +200,9 @@ namespace uMCP.Editor.Tools
                     info.AppendLine("void (戻り値なし)");
                 }
                 
-                return new
+                return new StandardResponse
                 {
-                    success = true,
-                    message = $"Method '{methodName}' executed successfully",
-                    result = result,
-                    executedMethod = new
-                    {
-                        className,
-                        methodName,
-                        isStatic = method.IsStatic,
-                        parametersUsed = methodParams.Select((p, i) => new { 
-                            name = p.Name, 
-                            type = p.ParameterType.Name,
-                            value = args[i] 
-                        }).ToArray()
-                    },
+                    Success = true,
                     FormattedOutput = info.ToString()
                 };
             }
@@ -229,11 +240,11 @@ namespace uMCP.Editor.Tools
                 errorInfo.AppendLine("- アセンブリのロード状態を確認");
                 errorInfo.AppendLine("- `get_console_logs`でコンパイルエラーを確認");
                 
-                return new { 
-                    success = false, 
-                    error = ex.Message, 
-                    stackTrace = ex.StackTrace,
-                    innerException = ex.InnerException?.Message,
+                return new StandardResponse
+                { 
+                    Success = false, 
+                    Error = ex.Message, 
+                    Message = ex.InnerException?.Message,
                     FormattedOutput = errorInfo.ToString()
                 };
             }

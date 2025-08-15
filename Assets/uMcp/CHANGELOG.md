@@ -5,6 +5,20 @@ All notable changes to Unity MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-08-15
+
+### Fixed
+- **Response Standardization**: Replaced all anonymous classes with `StandardResponse` class across all tool implementations
+- **Type Safety**: Improved compile-time type checking by eliminating anonymous object returns
+- **JSON Serialization**: Enhanced System.Text.Json compatibility with consistent response structure
+- **Code Consistency**: Unified response format across all 21 built-in tools
+
+### Technical Improvements
+- Added `StandardResponse` class with proper JSON property naming for MCP protocol compliance
+- Converted Vector/Color anonymous objects to formatted string representations for better readability
+- Enhanced maintainability through standardized response patterns
+- Fixed compilation errors related to malformed anonymous class replacements
+
 ## [1.0.0] - 2024-07-30
 
 ### Added

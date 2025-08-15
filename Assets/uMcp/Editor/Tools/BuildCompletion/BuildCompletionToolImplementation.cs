@@ -47,11 +47,9 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("## ⏳ コンパイル中");
                 info.AppendLine("スクリプトのコンパイルが進行中です。");
                 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
-                    IsCompiling = true,
-                    IsBuildInProgress = isBuildInProgress,
                     FormattedOutput = info.ToString()
                 };
             }
@@ -62,11 +60,9 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("## 🔨 ビルド実行中");
                 info.AppendLine("プレイヤービルドが進行中です。");
                 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
-                    IsCompiling = false,
-                    IsBuildInProgress = true,
                     FormattedOutput = info.ToString()
                 };
             }
@@ -91,17 +87,9 @@ namespace uMCP.Editor.Tools
                     info.AppendLine($"**警告数:** ⚠️ {lastBuildReport.summary.totalWarnings}");
                 }
                 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
-                    IsCompiling = false,
-                    IsBuildInProgress = false,
-                    LastBuildResult = lastBuildReport.summary.result.ToString(),
-                    LastBuildTime = lastBuildTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                    LastBuildPlatform = lastBuildReport.summary.platform.ToString(),
-                    LastBuildErrors = lastBuildReport.summary.totalErrors,
-                    LastBuildWarnings = lastBuildReport.summary.totalWarnings,
-                    LastBuildSize = lastBuildReport.summary.totalSize,
                     FormattedOutput = info.ToString()
                 };
             }
@@ -109,12 +97,9 @@ namespace uMCP.Editor.Tools
             info.AppendLine("## ℹ️ ビルド情報なし");
             info.AppendLine("まだビルドが実行されていません。");
             
-            return new
+            return new StandardResponse
             {
                 Success = true,
-                IsCompiling = false,
-                IsBuildInProgress = false,
-                LastBuildResult = "None",
                 FormattedOutput = info.ToString()
             };
         }
@@ -143,7 +128,7 @@ namespace uMCP.Editor.Tools
             
             if (cts.Token.IsCancellationRequested)
             {
-                return new
+                return new StandardResponse
                 {
                     Success = false,
                     Error = "タイムアウト",
@@ -163,25 +148,18 @@ namespace uMCP.Editor.Tools
                 info.AppendLine($"**プラットフォーム:** {lastBuildReport.summary.platform}");
                 info.AppendLine($"**ビルド時間:** {lastBuildReport.summary.totalTime.TotalSeconds:F2}秒");
                 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
-                    BuildCompleted = true,
-                    WaitDuration = duration,
-                    BuildResult = lastBuildReport.summary.result.ToString(),
-                    BuildErrors = lastBuildReport.summary.totalErrors,
-                    BuildWarnings = lastBuildReport.summary.totalWarnings,
                     FormattedOutput = info.ToString()
                 };
             }
             
             info.AppendLine("ビルドは完了しましたが、レポート情報がありません。");
             
-            return new
+            return new StandardResponse
             {
                 Success = true,
-                BuildCompleted = true,
-                WaitDuration = duration,
                 FormattedOutput = info.ToString()
             };
         }
@@ -195,7 +173,7 @@ namespace uMCP.Editor.Tools
             
             if (lastBuildReport == null)
             {
-                return new
+                return new StandardResponse
                 {
                     Success = false,
                     Error = "ビルド情報なし",
@@ -242,13 +220,9 @@ namespace uMCP.Editor.Tools
                 info.AppendLine($"## ⚠️ 警告: {lastBuildReport.summary.totalWarnings}件");
             }
             
-            return new
+            return new StandardResponse
             {
                 Success = true,
-                BuildResult = lastBuildReport.summary.result.ToString(),
-                TotalErrors = lastBuildReport.summary.totalErrors,
-                TotalWarnings = lastBuildReport.summary.totalWarnings,
-                StepCount = steps.Count,
                 FormattedOutput = info.ToString()
             };
         }
@@ -291,7 +265,7 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("- 次回ビルド時にフルビルドが実行されます");
                 info.AppendLine("- ビルドエラーの原因となるキャッシュ問題が解決される可能性があります");
                 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
                     FormattedOutput = info.ToString()
@@ -299,7 +273,7 @@ namespace uMCP.Editor.Tools
             }
             catch (Exception ex)
             {
-                return new
+                return new StandardResponse
                 {
                     Success = false,
                     Error = "キャッシュクリア失敗",

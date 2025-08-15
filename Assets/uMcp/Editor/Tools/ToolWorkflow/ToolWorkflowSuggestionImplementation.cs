@@ -152,7 +152,7 @@ namespace uMCP.Editor.Tools
                 summary.AppendLine("一般的な作業として `get_unity_info` や `get_scene_info` から始めることをお勧めします。");
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = summary.ToString()
@@ -262,7 +262,7 @@ namespace uMCP.Editor.Tools
                 result.AppendLine();
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = result.ToString()

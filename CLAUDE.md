@@ -60,6 +60,35 @@ internal sealed class MyToolImplementation
 }
 ```
 
+#### レスポンス統一化パターン
+```csharp
+// 全てのツール実装で統一されたStandardResponseクラスを使用
+public class StandardResponse
+{
+    public bool Success { get; set; }
+    [JsonPropertyName("formatted_output")]
+    public string FormattedOutput { get; set; }
+    public string Error { get; set; }
+    public string Message { get; set; }
+}
+
+// 正しい実装例（StandardResponse使用）
+return new StandardResponse
+{
+    Success = true,
+    FormattedOutput = info.ToString()
+};
+
+// ❌ 避けるべき実装（無名クラス）
+return new { Success = true, FormattedOutput = info.ToString() };
+```
+
+**レスポンス統一化の利点:**
+- **型安全性**: コンパイル時の型チェック
+- **JSONシリアライゼーション**: System.Text.Jsonとの確実な互換性
+- **保守性**: 統一されたレスポンス構造による開発効率向上
+- **MCPプロトコル適合**: 一貫したAPIレスポンス形式
+
 ### 主要依存関係
 - **UniTask (2.3.3+)**: 非同期処理・メインスレッド同期
 - **System.Text.Json (9.0.7+)**: 独自MCPプロトコル実装

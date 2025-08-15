@@ -120,7 +120,7 @@ namespace uMCP.Editor.Tools
             {
                 if (!Directory.Exists(DocumentationPath))
                 {
-                    return new { Success = false, ErrorMessage = $"Unityドキュメントが見つかりません: {DocumentationPath}" };
+                    return new StandardResponse { Success = false, Error = $"Unityドキュメントが見つかりません: {DocumentationPath}" };
                 }
 
                 // 既存インデックスをクリア
@@ -134,27 +134,30 @@ namespace uMCP.Editor.Tools
 
                 var memoryUsage = GC.GetTotalMemory(false) / 1024 / 1024;
 
-                return new
+                var info = new System.Text.StringBuilder();
+                info.AppendLine("=== 並列軽量インデックス再構築完了 ===");
+                info.AppendLine($"**処理モード:** Parallel");
+                info.AppendLine($"**総エントリ数:** {cachedLightIndex.TotalEntries}");
+                info.AppendLine($"**キーワード数:** {cachedLightIndex.KeywordIndex.Count}");
+                info.AppendLine($"**構築時間:** {stopwatch.ElapsedMilliseconds}ms");
+                info.AppendLine($"**メモリ使用量:** {memoryUsage}MB");
+                info.AppendLine($"**Unity版本:** {cachedLightIndex.UnityVersion}");
+                info.AppendLine($"**作成日時:** {cachedLightIndex.CreatedAt}");
+                
+                return new StandardResponse
                 {
                     Success = true,
-                    Message = "並列軽量インデックス再構築完了",
-                    ProcessingMode = "Parallel",
-                    TotalEntries = cachedLightIndex.TotalEntries,
-                    KeywordsCount = cachedLightIndex.KeywordIndex.Count,
-                    BuildTimeMs = stopwatch.ElapsedMilliseconds,
-                    MemoryUsageMB = memoryUsage,
-                    UnityVersion = cachedLightIndex.UnityVersion,
-                    CreatedAt = cachedLightIndex.CreatedAt
+                    FormattedOutput = info.ToString()
                 };
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                return new
+                return new StandardResponse
                 {
                     Success = false,
-                    ErrorMessage = $"並列軽量インデックス再構築エラー: {ex.Message}",
-                    BuildTimeMs = stopwatch.ElapsedMilliseconds
+                    Error = "並列軽量インデックス再構築エラー",
+                    Message = $"{ex.Message} (構築時間: {stopwatch.ElapsedMilliseconds}ms)"
                 };
             }
         }

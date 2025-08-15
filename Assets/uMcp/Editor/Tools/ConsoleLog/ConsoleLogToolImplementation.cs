@@ -144,7 +144,7 @@ namespace uMCP.Editor.Tools
                 summary.AppendLine("**ログはありません。**");
             }
 
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = summary.ToString()
@@ -183,7 +183,7 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("- 情報ログのクリア");
                 info.AppendLine("- コンソールの表示がリセットされました");
                 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
                     FormattedOutput = info.ToString()
@@ -250,7 +250,7 @@ namespace uMCP.Editor.Tools
             }
             info.AppendLine($"**完全メッセージ:** {fullMessage}");
             
-            return new
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
@@ -344,7 +344,7 @@ namespace uMCP.Editor.Tools
                     }
                 }
 
-                return new
+                return new StandardResponse
                 {
                     Success = true,
                     FormattedOutput = info.ToString()

@@ -5,6 +5,18 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [1.0.5] - 2025-08-18
+
+### Removed
+- **不要なレスポンスクラス削除**: コードベースの簡素化
+  - AssetManagement関連の専用レスポンスクラス（AssetInfo, AssetInfoResponse, AssetOperationResponse, AssetSearchResponse）
+  - ConsoleLog関連の専用レスポンスクラス（LogStatisticsResponse, LogSummary, LogToConsoleResponse, StatisticsSummary）
+  - StandardResponseクラスで統一され、型安全性とJSON互換性が向上
+
+### Improved
+- **コードベース簡素化**: 重複したレスポンスクラスの削除により保守性向上
+- **統一されたレスポンス形式**: StandardResponseによる一貫したAPI設計
+
 ## [1.0.4] - 2025-08-18
 
 ### Added

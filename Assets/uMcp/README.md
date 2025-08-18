@@ -5,6 +5,7 @@ AIアシスタントがUnityプロジェクトとリアルタイムでやり取�
 ## 機能
 
 ### 🚀 コアMCPサーバー
+
 - **HTTP + JSON-RPC 2.0** プロトコル `127.0.0.1:49001/umcp/` で動作
 - **自動起動** Unity Editor と連携
 - **リアルタイム** Unity プロジェクト操作
@@ -12,20 +13,21 @@ AIアシスタントがUnityプロジェクトとリアルタイムでやり取�
 
 ### 🛠️ ビルトインツール (26個)
 
-| カテゴリ | ツール数 | 主要ツール | 主要機能 |
-|----------|----------|------------|----------|
-| **Unity情報** | 6個 | `get_unity_info`, `get_scene_info`, `get_hierarchy_analysis`, `get_game_object_info`, `get_prefab_info`, `detect_missing_scripts` | エディタ詳細、シーン分析、オブジェクト詳細、Missing Script検出 |
-| **アセット管理** | 4個 | `refresh_assets`, `save_project`, `find_assets`, `get_asset_info` | アセットライフサイクル管理 |
-| **ビルド管理** | 4個 | `get_build_status`, `wait_for_build_completion`, `get_last_build_log`, `clear_build_cache` | ビルド状態監視と管理 |
-| **コンソールログ** | 4個 | `get_console_logs`, `clear_console_logs`, `log_to_console`, `get_log_statistics` | ログ管理と分析 |
-| **テスト実行** | 3個 | `run_edit_mode_tests`, `run_play_mode_tests`, `get_available_tests` | テスト実行 |
-| **ドキュメント検索** | 2個 | `search_documentation`, `rebuild_documentation_index` | Unity公式ドキュメント高速検索 |
-| **ワークフロー** | 2個 | `get_next_action_suggestions`, `get_workflow_patterns` | 提案システム |
-| **エディタ拡張** | 1個 | `execute_editor_method` | カスタムメソッド実行 |
+| カテゴリ         | ツール数 | 主要ツール                                                                                                                             | 主要機能                                   |
+|--------------|------|-----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|
+| **Unity情報**  | 6個   | `get_unity_info`, `get_scene_info`, `get_hierarchy_analysis`, `get_game_object_info`, `get_prefab_info`, `detect_missing_scripts` | エディタ詳細、シーン分析、オブジェクト詳細、Missing Script検出 |
+| **アセット管理**   | 4個   | `refresh_assets`, `save_project`, `find_assets`, `get_asset_info`                                                                 | アセットライフサイクル管理                          |
+| **ビルド管理**    | 4個   | `get_build_status`, `wait_for_build_completion`, `get_last_build_log`, `clear_build_cache`                                        | ビルド状態監視と管理                             |
+| **コンソールログ**  | 4個   | `get_console_logs`, `clear_console_logs`, `log_to_console`, `get_log_statistics`                                                  | ログ管理と分析                                |
+| **テスト実行**    | 3個   | `run_edit_mode_tests`, `run_play_mode_tests`, `get_available_tests`                                                               | テスト実行                                  |
+| **ドキュメント検索** | 2個   | `search_documentation`, `rebuild_documentation_index`                                                                             | Unity公式ドキュメント高速検索                      |
+| **ワークフロー**   | 2個   | `get_next_action_suggestions`, `get_workflow_patterns`                                                                            | 提案システム                                 |
+| **エディタ拡張**   | 1個   | `execute_editor_method`                                                                                                           | カスタムメソッド実行                             |
 
 ## インストール
 
 ### 前提条件
+
 Unity Package Manager (`+` → `Add package from git URL`) で以下の依存関係をインストール:
 
 1. **UniTask**: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
@@ -34,11 +36,13 @@ Unity Package Manager (`+` → `Add package from git URL`) で以下の依存関
 ### Unity MCP Server のインストール
 
 **Package Manager 経由 (推奨):**
+
 ```
 https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp
 ```
 
 **その他の方法:**
+
 - **手動**: [Releases](https://github.com/yoshi32a/uMcp/releases) からダウンロード → `Assets/` または `Packages/` に展開
 - **UnityPackage**: [Releases](https://github.com/yoshi32a/uMcp/releases) から `.unitypackage` をダウンロード → Unity でインポート
 
@@ -52,7 +56,9 @@ https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp
 ## 使用方法
 
 ### 設定
+
 `Tools > uMCP > Open Settings` で設定にアクセス:
+
 - **サーバー**: `127.0.0.1:49001/umcp/` (デフォルト)
 - **自動起動**: 自動サーバー起動
 - **デバッグモード**: リクエスト/レスポンスのログ出力
@@ -60,15 +66,16 @@ https://github.com/yoshi32a/uMcp.git?path=Assets/uMcp
 
 ### MCPクライアント接続
 
-| クライアント | 接続方法 |
-|-------------|----------|
-| **MCP Inspector** | [inspector.mcp.run](https://inspector.mcp.run/) → HTTP → `http://127.0.0.1:49001/umcp/` |
-| **Claude CLI** | `claude mcp add -s project --transport http unity-mcp-server http://127.0.0.1:49001/umcp/` |
-| **カスタムクライアント** | `http://127.0.0.1:49001/umcp/` へ JSON-RPC 2.0 で HTTP POST |
+| クライアント            | 接続方法                                                                                       |
+|-------------------|--------------------------------------------------------------------------------------------|
+| **MCP Inspector** | [inspector.mcp.run](https://inspector.mcp.run/) → HTTP → `http://127.0.0.1:49001/umcp/`    |
+| **Claude CLI**    | `claude mcp add -s project --transport http unity-mcp-server http://127.0.0.1:49001/umcp/` |
+| **カスタムクライアント**    | `http://127.0.0.1:49001/umcp/` へ JSON-RPC 2.0 で HTTP POST                                  |
 
 ## 開発
 
 ### カスタムツール
+
 属性駆動登録でScriptableObjectベースツールを作成:
 
 ```csharp
@@ -90,12 +97,14 @@ internal sealed class MyCustomToolImplementation
 ```
 
 **重要なポイント:**
+
 - Unity API呼び出し前に `await UniTask.SwitchToMainThread()` を使用
 - MCPクライアント統合のため `[Description]` を追加
 - 統一された `StandardResponse` クラスを使用
 - シリアライゼーション可能なオブジェクトを返す
 
 ### レスポンス統一化
+
 全ツールで統一された `StandardResponse` クラスを使用:
 
 ```csharp

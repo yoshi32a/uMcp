@@ -5,6 +5,26 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [1.0.4] - 2025-08-18
+
+### Added
+- **Missing Script検出ツール**: `detect_missing_scripts` - シーン内のnullコンポーネントを持つGameObjectを検出
+  - 全シーン/アクティブのみ/非アクティブのみの検索範囲指定
+  - 詳細な統計情報（問題GameObject数、Missing Script総数、平均Missing数）
+  - 階層パスと有効コンポーネント一覧の表示
+  - 推奨アクションの提示
+
+### Fixed
+- **Componentのnull参照対策**: UnityInfoツール全体でnullチェックを実装
+  - GetComponents<Component>()で取得した配列のnull要素を適切にフィルタリング
+  - Missing Scriptが存在してもツールがエラーなく動作するよう改善
+  - コンポーネント数のカウントを有効なコンポーネントのみで行うよう修正
+
+### Improved
+- **コード品質**: Componentのnullチェックパターンを統一
+  - `Where(c => c != null)`による一貫したフィルタリング実装
+  - validComponentsとして有効なコンポーネントのみを処理するパターンの確立
+
 ## [1.0.3] - 2025-08-15
 
 ### Improved

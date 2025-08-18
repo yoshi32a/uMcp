@@ -1,8 +1,8 @@
 {
   "name": "com.yoshi32a.unity-mcp-server",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "displayName": "Unity MCP Server",
-  "description": "UnityエディタでAIアシスタントがUnityプロジェクトとリアルタイムでやり取りできるModel Context Protocol (MCP) サーバー実装。25個のビルトインツール、Markdownベースワークフローシステム、アクション提案を搭載。アセット管理、ビルド管理、コンソールログ、テスト実行、プロジェクト分析、ワークフローガイダンスをサポート。UniTaskが必要。",
+  "description": "UnityエディタでAIアシスタントがUnityプロジェクトとリアルタイムでやり取りできるModel Context Protocol (MCP) サーバー実装。26個のビルトインツール、Markdownベースワークフローシステム、アクション提案を搭載。アセット管理、ビルド管理、コンソールログ、テスト実行、プロジェクト分析、Missing Script検出、ワークフローガイダンスをサポート。UniTaskが必要。",
   "unity": "2022.3",
   "documentationUrl": "https://github.com/yoshi32a/uMcp",
   "changelogUrl": "https://github.com/yoshi32a/uMcp/blob/master/CHANGELOG.md",

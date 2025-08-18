@@ -124,14 +124,15 @@ var sortedCandidates = candidateScores
 
 ## MCPサーバー機能
 
-### ビルトインツールセット（全25ツール）
+### ビルトインツールセット（全26ツール）
 
-#### Unity情報ツール（5ツール）
+#### Unity情報ツール（6ツール）
 - **get_unity_info**: Unity エディターとプロジェクトの詳細情報
 - **get_scene_info**: 現在のシーン構造とGameObject分析
 - **get_hierarchy_analysis**: 指定GameObjectとその子階層の構造を詳細分析
 - **get_game_object_info**: 指定GameObjectの詳細情報を取得
 - **get_prefab_info**: 指定Prefabの詳細情報を取得
+- **detect_missing_scripts**: シーン内のMissing Script（nullコンポーネント）を検出
 
 #### アセット管理ツール（4ツール）
 - **refresh_assets**: アセットデータベースのリフレッシュ
@@ -252,6 +253,31 @@ Assets/uMcp/
 3. **MCP接続**: `http://localhost:49001/umcp/`にMCPクライアント接続
 
 ## 開発上の重要事項
+
+### Componentのnull参照対策パターン
+Unity APIの`GetComponents<Component>()`使用時には必ずnullチェックを実装すること。
+
+#### 問題の背景
+Missing Script（削除されたスクリプト、コンパイルエラー等）が存在する場合、GetComponentsは配列内にnull要素を含む。
+
+#### 必須実装パターン
+```csharp
+// ❌ 危険な実装（null参照エラーの可能性）
+var components = gameObject.GetComponents<Component>();
+info.AppendLine($"コンポーネント数: {components.Length}");
+
+// ✅ 安全な実装（nullフィルタリング）
+var components = gameObject.GetComponents<Component>();
+var validComponents = components.Where(c => c != null).ToArray();
+info.AppendLine($"コンポーネント数: {validComponents.Length}");
+```
+
+#### 適用箇所
+- シーン情報取得時のコンポーネント数カウント
+- GameObject詳細情報の処理
+- Prefab情報の取得
+- UI要素の分析
+- Missing Script検出ツール
 
 ### パフォーマンス考慮
 - **メインスレッド同期**: 全Unity API呼び出しで`await UniTask.SwitchToMainThread()`必須

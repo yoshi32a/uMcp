@@ -103,8 +103,10 @@ namespace uMCP.Editor.Tools
                     foreach (var go in activeObjects.Take(15))
                     {
                         var components = go.GetComponents<Component>();
+                        // Componentのnullチェック
+                        var validComponents = components.Where(c => c != null).ToArray();
                         var icon = GetGameObjectIcon(go);
-                        info.AppendLine($"{icon} **{go.name}** ({components.Length}コンポーネント)");
+                        info.AppendLine($"{icon} **{go.name}** ({validComponents.Length}コンポーネント)");
                         info.AppendLine($"   Tag: {go.tag}, Layer: {LayerMask.LayerToName(go.layer)}");
                     }
                     if (activeObjects.Length > 15)
@@ -120,8 +122,10 @@ namespace uMCP.Editor.Tools
                     foreach (var go in inactiveObjects.Take(10))
                     {
                         var components = go.GetComponents<Component>();
+                        // Componentのnullチェック
+                        var validComponents = components.Where(c => c != null).ToArray();
                         var icon = GetGameObjectIcon(go);
-                        info.AppendLine($"{icon} **{go.name}** ({components.Length}コンポーネント)");
+                        info.AppendLine($"{icon} **{go.name}** ({validComponents.Length}コンポーネント)");
                     }
                     if (inactiveObjects.Length > 10)
                     {
@@ -271,6 +275,8 @@ namespace uMCP.Editor.Tools
             }
 
             var components = gameObject.GetComponents<Component>();
+            // Componentのnullチェック
+            var validComponents = components.Where(c => c != null).ToArray();
             var transform = gameObject.transform;
 
             var info = new System.Text.StringBuilder();
@@ -301,8 +307,8 @@ namespace uMCP.Editor.Tools
             info.AppendLine();
 
             // コンポーネント情報
-            info.AppendLine($"## ⚙️ コンポーネント ({components.Length}件)");
-            foreach (var component in components.Where(c => c != null))
+            info.AppendLine($"## ⚙️ コンポーネント ({validComponents.Length}件)");
+            foreach (var component in validComponents)
             {
                 var componentName = component.GetType().Name;
                 var componentIcon = componentName switch
@@ -356,6 +362,8 @@ namespace uMCP.Editor.Tools
             }
 
             var components = prefabAsset.GetComponents<Component>();
+            // Componentのnullチェック
+            var validComponents = components.Where(c => c != null).ToArray();
             var transform = prefabAsset.transform;
 
             var info = new System.Text.StringBuilder();
@@ -380,8 +388,8 @@ namespace uMCP.Editor.Tools
             info.AppendLine();
 
             // コンポーネント情報
-            info.AppendLine($"## ⚙️ コンポーネント ({components.Length}件)");
-            foreach (var component in components.Where(c => c != null))
+            info.AppendLine($"## ⚙️ コンポーネント ({validComponents.Length}件)");
+            foreach (var component in validComponents)
             {
                 var componentName = component.GetType().Name;
                 var componentIcon = componentName switch
@@ -423,6 +431,177 @@ namespace uMCP.Editor.Tools
                 Success = true,
                 FormattedOutput = info.ToString()
             };
+        }
+
+        /// <summary>Missing Script（Nullコンポーネント）を持つGameObjectを検出</summary>
+        [McpServerTool, Description("シーン内のMissing Script（Nullコンポーネント）を持つGameObjectを検出して詳細情報を取得")]
+        public async ValueTask<object> DetectMissingScripts(
+            [Description("検索対象（All/ActiveOnly/InactiveOnly）")] string searchScope = "All",
+            [Description("詳細情報を含めるか")] bool includeDetails = true)
+        {
+            await UniTask.SwitchToMainThread();
+
+            var info = new System.Text.StringBuilder();
+            info.AppendLine("=== Missing Script 検出結果 ===");
+            info.AppendLine($"**検索時刻:** {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            info.AppendLine($"**Unity バージョン:** {Application.unityVersion}");
+            info.AppendLine($"**検索範囲:** {searchScope}");
+            info.AppendLine();
+
+            // 検索対象のGameObjectを取得
+            var allGameObjects = new List<GameObject>();
+            var loadedScenes = new List<UnityEngine.SceneManagement.Scene>();
+            
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+                if (scene.isLoaded)
+                {
+                    loadedScenes.Add(scene);
+                    var rootObjects = scene.GetRootGameObjects();
+                    foreach (var root in rootObjects)
+                    {
+                        if (ShouldIncludeObject(root, searchScope))
+                        {
+                            allGameObjects.Add(root);
+                            allGameObjects.AddRange(GetAllChildGameObjects(root));
+                        }
+                    }
+                }
+            }
+
+            // Missing Scriptを持つGameObjectを検出
+            var missingScriptObjects = new List<MissingScriptInfo>();
+            int totalMissingCount = 0;
+
+            foreach (var go in allGameObjects)
+            {
+                var components = go.GetComponents<Component>();
+                var missingCount = components.Count(c => c == null);
+                
+                if (missingCount > 0)
+                {
+                    totalMissingCount += missingCount;
+                    missingScriptObjects.Add(new MissingScriptInfo
+                    {
+                        GameObject = go,
+                        MissingCount = missingCount,
+                        TotalComponents = components.Length,
+                        Path = GetGameObjectPath(go),
+                        SceneName = go.scene.name
+                    });
+                }
+            }
+
+            // 統計情報
+            info.AppendLine("## 📊 統計情報");
+            info.AppendLine($"**検査GameObject数:** {allGameObjects.Count}件");
+            info.AppendLine($"**問題のあるGameObject数:** {missingScriptObjects.Count}件");
+            info.AppendLine($"**Missing Script総数:** {totalMissingCount}件");
+            
+            if (missingScriptObjects.Count > 0)
+            {
+                var avgMissing = (float)totalMissingCount / missingScriptObjects.Count;
+                info.AppendLine($"**平均Missing数/GameObject:** {avgMissing:F1}件");
+            }
+            info.AppendLine();
+
+            // 問題のあるGameObjectリスト
+            if (missingScriptObjects.Count > 0)
+            {
+                info.AppendLine("## ⚠️ Missing Scriptを持つGameObject一覧");
+                
+                // シーンごとにグループ化
+                var groupedByScene = missingScriptObjects.GroupBy(x => x.SceneName);
+                
+                foreach (var sceneGroup in groupedByScene)
+                {
+                    info.AppendLine($"\n### 📋 シーン: {sceneGroup.Key}");
+                    
+                    int displayCount = 0;
+                    foreach (var item in sceneGroup.OrderByDescending(x => x.MissingCount).Take(50))
+                    {
+                        displayCount++;
+                        var icon = item.GameObject.activeInHierarchy ? "🔴" : "⚫";
+                        info.AppendLine($"{icon} **{item.Path}**");
+                        info.AppendLine($"   Missing: {item.MissingCount}個 / 全{item.TotalComponents}個のコンポーネント");
+                        
+                        if (includeDetails)
+                        {
+                            // 有効なコンポーネントの詳細
+                            var validComponents = item.GameObject.GetComponents<Component>()
+                                .Where(c => c != null)
+                                .Select(c => c.GetType().Name)
+                                .ToArray();
+                            
+                            if (validComponents.Length > 0)
+                            {
+                                info.AppendLine($"   有効: {string.Join(", ", validComponents.Take(5))}");
+                                if (validComponents.Length > 5)
+                                {
+                                    info.AppendLine($"   ...他 {validComponents.Length - 5}個");
+                                }
+                            }
+                        }
+                        info.AppendLine();
+                    }
+                    
+                    if (sceneGroup.Count() > 50)
+                    {
+                        info.AppendLine($"   ...他 {sceneGroup.Count() - 50}個のGameObject");
+                    }
+                }
+                
+                // 推奨アクション
+                info.AppendLine("\n## 💡 推奨アクション");
+                info.AppendLine("1. **スクリプトの復元**: 削除したスクリプトが必要な場合は、バージョン管理から復元");
+                info.AppendLine("2. **コンポーネントの削除**: 不要な場合は、Missing Scriptコンポーネントを手動で削除");
+                info.AppendLine("3. **一括クリーンアップ**: EditorスクリプトでMissing Scriptを一括削除");
+                info.AppendLine("4. **参照の更新**: スクリプトを移動/リネームした場合は、正しい参照に更新");
+            }
+            else
+            {
+                info.AppendLine("## ✅ 結果");
+                info.AppendLine("**Missing Scriptは検出されませんでした！**");
+                info.AppendLine("すべてのGameObjectのコンポーネントは正常です。");
+            }
+
+            return new StandardResponse
+            {
+                Success = true,
+                FormattedOutput = info.ToString()
+            };
+        }
+
+        IEnumerable<GameObject> GetAllChildGameObjects(GameObject parent)
+        {
+            foreach (Transform child in parent.transform)
+            {
+                yield return child.gameObject;
+                foreach (var grandChild in GetAllChildGameObjects(child.gameObject))
+                {
+                    yield return grandChild;
+                }
+            }
+        }
+
+        bool ShouldIncludeObject(GameObject go, string searchScope)
+        {
+            return searchScope switch
+            {
+                "ActiveOnly" => go.activeInHierarchy,
+                "InactiveOnly" => !go.activeInHierarchy,
+                _ => true // "All"
+            };
+        }
+
+        class MissingScriptInfo
+        {
+            public GameObject GameObject { get; set; }
+            public int MissingCount { get; set; }
+            public int TotalComponents { get; set; }
+            public string Path { get; set; }
+            public string SceneName { get; set; }
         }
 
         /// <summary>GameObjectの階層パスを取得</summary>
@@ -521,20 +700,22 @@ namespace uMCP.Editor.Tools
         string GetGameObjectType(GameObject gameObject)
         {
             var components = gameObject.GetComponents<Component>();
+            // Componentのnullチェック
+            var validComponents = components.Where(c => c != null).ToArray();
             
-            if (components.Any(c => c.GetType().Name == "Canvas"))
+            if (validComponents.Any(c => c.GetType().Name == "Canvas"))
                 return "UI Canvas";
-            if (components.Any(c => c.GetType().Name == "Camera"))
+            if (validComponents.Any(c => c.GetType().Name == "Camera"))
                 return "Camera";
-            if (components.Any(c => c.GetType().Name == "Light"))
+            if (validComponents.Any(c => c.GetType().Name == "Light"))
                 return "Light";
-            if (components.Any(c => c.GetType().Name == "Renderer"))
+            if (validComponents.Any(c => c.GetType().Name == "Renderer"))
                 return "Rendered Object";
-            if (components.Any(c => c.GetType().Name.Contains("UI") || c.GetType().Namespace == "UnityEngine.UI"))
+            if (validComponents.Any(c => c.GetType().Name.Contains("UI") || c.GetType().Namespace == "UnityEngine.UI"))
                 return "UI Element";
-            if (components.Any(c => c.GetType().Name.Contains("Collider")))
+            if (validComponents.Any(c => c.GetType().Name.Contains("Collider")))
                 return "Physics Object";
-            if (components.Any(c => c.GetType().Name == "AudioSource"))
+            if (validComponents.Any(c => c.GetType().Name == "AudioSource"))
                 return "Audio Source";
                 
             return "GameObject";

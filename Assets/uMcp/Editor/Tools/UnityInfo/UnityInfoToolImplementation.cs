@@ -65,11 +65,11 @@ namespace uMCP.Editor.Tools
             info.AppendLine($"**GPU:** {SystemInfo.graphicsDeviceName}");
             info.AppendLine($"**GPU メモリ:** {SystemInfo.graphicsMemorySize} MB");
 
-            return new ValueTask<object>(new StandardResponse
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            });
+            };
         }
 
         /// <summary>現在のシーン情報を取得</summary>
@@ -138,11 +138,11 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("**シーンは空です。**");
             }
 
-            return new ValueTask<object>(new StandardResponse
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            });
+            };
         }
 
 
@@ -235,11 +235,11 @@ namespace uMCP.Editor.Tools
                 info.AppendLine($"{componentIcon} **{componentName}** {enabled}");
             }
 
-            return new ValueTask<object>(new StandardResponse
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            });
+            };
         }
 
         [McpServerTool, Description("指定したアセット（Prefab、Scene、その他）の詳細情報を読みやすい形式で取得")]
@@ -628,11 +628,11 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("すべてのGameObjectのコンポーネントは正常です。");
             }
 
-            return new ValueTask<object>(new StandardResponse
+            return new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            });
+            };
         }
 
         IEnumerable<GameObject> GetAllChildGameObjects(GameObject parent)

@@ -5,6 +5,11 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [1.0.8] - 2025-08-18
+
+### Fixed
+- **不要なUniTaskインスタンス削除**: コード品質向上のため不要な`new UniTask`を削除
+
 ## [1.0.7] - 2025-08-18
 
 ### Removed

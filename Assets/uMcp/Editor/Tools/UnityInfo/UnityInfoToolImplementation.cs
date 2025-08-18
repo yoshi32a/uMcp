@@ -86,51 +86,50 @@ namespace uMCP.Editor.Tools
             info.AppendLine($"**パス:** {(string.IsNullOrEmpty(scene.path) ? "未保存" : scene.path)}");
             info.AppendLine($"**ビルドインデックス:** {scene.buildIndex}");
             info.AppendLine($"**状態:** {(scene.isLoaded ? "読み込み済み" : "未読み込み")}{(scene.isDirty ? " (変更あり)" : "")}");
-            info.AppendLine($"**ルートオブジェクト数:** {rootGameObjects.Length}件");
             info.AppendLine();
 
             if (rootGameObjects.Length > 0)
             {
-                info.AppendLine("## ルートGameObject一覧");
-                
-                // アクティブ/非アクティブで分類
-                var activeObjects = rootGameObjects.Where(go => go.activeSelf).ToArray();
-                var inactiveObjects = rootGameObjects.Where(go => !go.activeSelf).ToArray();
+                // 統計情報の計算
+                var allGameObjects = new List<GameObject>();
+                int maxDepth = 0;
+                int totalActiveObjects = 0;
+                int totalInactiveObjects = 0;
 
-                if (activeObjects.Length > 0)
+                foreach (var root in rootGameObjects)
                 {
-                    info.AppendLine("### ✅ アクティブオブジェクト");
-                    foreach (var go in activeObjects.Take(15))
+                    allGameObjects.Add(root);
+                    allGameObjects.AddRange(GetAllChildGameObjects(root));
+                    
+                    int rootDepth = CalculateMaxDepth(root);
+                    maxDepth = Math.Max(maxDepth, rootDepth);
+                    
+                    if (root.activeInHierarchy) totalActiveObjects++;
+                    else totalInactiveObjects++;
+                    
+                    // 子オブジェクトの状態もカウント
+                    foreach (var child in GetAllChildGameObjects(root))
                     {
-                        var components = go.GetComponents<Component>();
-                        // Componentのnullチェック
-                        var validComponents = components.Where(c => c != null).ToArray();
-                        var icon = GetGameObjectIcon(go);
-                        info.AppendLine($"{icon} **{go.name}** ({validComponents.Length}コンポーネント)");
-                        info.AppendLine($"   Tag: {go.tag}, Layer: {LayerMask.LayerToName(go.layer)}");
+                        if (child.activeInHierarchy) totalActiveObjects++;
+                        else totalInactiveObjects++;
                     }
-                    if (activeObjects.Length > 15)
-                    {
-                        info.AppendLine($"   ...他 {activeObjects.Length - 15}件");
-                    }
-                    info.AppendLine();
                 }
 
-                if (inactiveObjects.Length > 0)
+                // 統計情報表示
+                info.AppendLine("## 📊 統計情報");
+                info.AppendLine($"**ルートオブジェクト数:** {rootGameObjects.Length}件");
+                info.AppendLine($"**総GameObject数:** {allGameObjects.Count}件");
+                info.AppendLine($"**アクティブオブジェクト:** {totalActiveObjects}件");
+                info.AppendLine($"**非アクティブオブジェクト:** {totalInactiveObjects}件");
+                info.AppendLine($"**最大階層深度:** {maxDepth}階層");
+                info.AppendLine();
+
+                // 階層構造表示
+                info.AppendLine("## 🌳 階層構造");
+                
+                foreach (var root in rootGameObjects)
                 {
-                    info.AppendLine("### ❌ 非アクティブオブジェクト");
-                    foreach (var go in inactiveObjects.Take(10))
-                    {
-                        var components = go.GetComponents<Component>();
-                        // Componentのnullチェック
-                        var validComponents = components.Where(c => c != null).ToArray();
-                        var icon = GetGameObjectIcon(go);
-                        info.AppendLine($"{icon} **{go.name}** ({validComponents.Length}コンポーネント)");
-                    }
-                    if (inactiveObjects.Length > 10)
-                    {
-                        info.AppendLine($"   ...他 {inactiveObjects.Length - 10}件");
-                    }
+                    DisplayGameObjectHierarchy(root, info, "", true);
                 }
             }
             else
@@ -145,100 +144,7 @@ namespace uMCP.Editor.Tools
             };
         }
 
-        /// <summary>指定したGameObjectの階層構造を分析</summary>
-        [McpServerTool, Description("指定したGameObjectとその子階層の構造を読みやすい形式で詳細分析")]
-        public async ValueTask<object> GetHierarchyAnalysis(
-            [Description("分析対象のGameObjectの名前（デフォルト：Canvas）")] string gameObjectName = "Canvas")
-        {
-            await UniTask.SwitchToMainThread();
 
-            if (string.IsNullOrEmpty(gameObjectName))
-                gameObjectName = "Canvas";
-
-            // GameObjectを探す
-            var gameObject = GameObject.Find(gameObjectName);
-            if (gameObject == null)
-            {
-                var allGameObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
-                gameObject = allGameObjects.FirstOrDefault(go => go.name.Contains(gameObjectName));
-            }
-
-            if (gameObject == null)
-            {
-                return new ErrorResponse
-                {
-                    Success = false,
-                    Error = $"GameObject '{gameObjectName}' not found"
-                };
-            }
-
-            var analysis = AnalyzeHierarchy(gameObject);
-            var rootNode = BuildHierarchyNode(gameObject);
-
-            var info = new System.Text.StringBuilder();
-            info.AppendLine($"=== 階層分析: {gameObject.name} ===");
-            info.AppendLine($"**分析時刻:** {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            info.AppendLine($"**Unityバージョン:** {Application.unityVersion}");
-            info.AppendLine();
-
-            // 統計情報
-            info.AppendLine("## 📊 統計情報");
-            info.AppendLine($"**総オブジェクト数:** {analysis.TotalObjects}件");
-            info.AppendLine($"**最大階層深度:** {analysis.MaxDepth}階層");
-            info.AppendLine($"**UIエレメント数:** {analysis.UIElements}件");
-            info.AppendLine();
-
-            // 階層構造を表示
-            info.AppendLine("## 🌳 階層構造");
-            BuildHierarchyText(rootNode, info, "", 0);
-
-            // 問題点の表示
-            if (analysis.PerformanceConcerns.Length > 0)
-            {
-                info.AppendLine();
-                info.AppendLine("## ⚠️ パフォーマンス上の懸念");
-                foreach (var concern in analysis.PerformanceConcerns)
-                {
-                    info.AppendLine($"- {concern}");
-                }
-            }
-
-            if (analysis.DesignIssues.Length > 0)
-            {
-                info.AppendLine();
-                info.AppendLine("## 🎨 設計上の問題");
-                foreach (var issue in analysis.DesignIssues)
-                {
-                    info.AppendLine($"- {issue}");
-                }
-            }
-
-            if (analysis.MissingReferences.Length > 0)
-            {
-                info.AppendLine();
-                info.AppendLine("## ❌ 欠損参照");
-                foreach (var missing in analysis.MissingReferences)
-                {
-                    info.AppendLine($"- {missing}");
-                }
-            }
-
-            if (analysis.Recommendations.Length > 0)
-            {
-                info.AppendLine();
-                info.AppendLine("## 💡 推奨事項");
-                foreach (var recommendation in analysis.Recommendations)
-                {
-                    info.AppendLine($"- {recommendation}");
-                }
-            }
-
-            return new StandardResponse
-            {
-                Success = true,
-                FormattedOutput = info.ToString()
-            };
-        }
 
         /// <summary>指定したGameObjectの詳細情報を取得</summary>
         [McpServerTool, Description("指定したGameObjectの詳細情報を読みやすい形式で取得")]
@@ -582,6 +488,43 @@ namespace uMCP.Editor.Tools
                 {
                     yield return grandChild;
                 }
+            }
+        }
+
+        void DisplayGameObjectHierarchy(GameObject gameObject, System.Text.StringBuilder info, string prefix, bool isLast)
+        {
+            // アイコンとオブジェクト情報
+            var components = gameObject.GetComponents<Component>();
+            var validComponents = components.Where(c => c != null).ToArray();
+            var icon = GetGameObjectIcon(gameObject);
+            var statusIcon = gameObject.activeInHierarchy ? "✅" : "❌";
+            
+            // 階層表示用の線
+            var connector = isLast ? "└─ " : "├─ ";
+            var childPrefix = isLast ? "    " : "│   ";
+
+            info.AppendLine($"{prefix}{connector}{statusIcon} {icon} **{gameObject.name}** ({validComponents.Length}コンポーネント)");
+            info.AppendLine($"{prefix}{childPrefix}   Tag: {gameObject.tag} | Layer: {LayerMask.LayerToName(gameObject.layer)}");
+            
+            // 有効なコンポーネント一覧（簡潔に）
+            if (validComponents.Length > 0)
+            {
+                var componentNames = validComponents.Select(c => c.GetType().Name).Take(3);
+                var componentList = string.Join(", ", componentNames);
+                if (validComponents.Length > 3)
+                {
+                    componentList += $", ...他{validComponents.Length - 3}個";
+                }
+                info.AppendLine($"{prefix}{childPrefix}   Components: {componentList}");
+            }
+            
+            // 子オブジェクトの処理
+            var childCount = gameObject.transform.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = gameObject.transform.GetChild(i).gameObject;
+                var isLastChild = (i == childCount - 1);
+                DisplayGameObjectHierarchy(child, info, prefix + childPrefix, isLastChild);
             }
         }
 
@@ -1058,78 +1001,13 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>階層構造を分析</summary>
-        HierarchyAnalysis AnalyzeHierarchy(GameObject rootObject)
-        {
-            var allObjects = new List<GameObject>();
-            var uiElements = new UIAnalysis();
-            var performanceConcerns = new List<string>();
-            var designIssues = new List<string>();
-            var missingReferences = new List<string>();
-            var recommendations = new List<string>();
 
-            CollectAllChildren(rootObject, allObjects);
-            
-            int maxDepth = CalculateMaxDepth(rootObject);
-            AnalyzeUIElements(allObjects, uiElements);
-            AnalyzePerformance(allObjects, performanceConcerns);
-            AnalyzeDesign(allObjects, designIssues);
-            AnalyzeMissingReferences(allObjects, missingReferences);
-            GenerateRecommendations(allObjects, uiElements, recommendations);
-
-            return new HierarchyAnalysis
-            {
-                TotalObjects = allObjects.Count,
-                MaxDepth = maxDepth,
-                UIElements = uiElements,
-                PerformanceConcerns = performanceConcerns.ToArray(),
-                DesignIssues = designIssues.ToArray(),
-                MissingReferences = missingReferences.ToArray(),
-                Recommendations = recommendations.ToArray()
-            };
-        }
 
         /// <summary>階層ノードを構築</summary>
-        HierarchyNode BuildHierarchyNode(GameObject gameObject)
-        {
-            var components = gameObject.GetComponents<Component>();
-            var keyComponents = components.Where(c => c != null)
-                .Select(c => c.GetType().Name)
-                .Where(name => IsKeyComponent(name))
-                .ToArray();
 
-            var issues = new List<string>();
-            AnalyzeObjectIssues(gameObject, issues);
-
-            var children = new List<HierarchyNode>();
-            for (int i = 0; i < gameObject.transform.childCount; i++)
-            {
-                var child = gameObject.transform.GetChild(i).gameObject;
-                children.Add(BuildHierarchyNode(child));
-            }
-
-            return new HierarchyNode
-            {
-                Name = gameObject.name,
-                Type = GetGameObjectType(gameObject),
-                Active = gameObject.activeSelf,
-                Tag = gameObject.tag,
-                Layer = LayerMask.LayerToName(gameObject.layer),
-                ComponentCount = components.Length,
-                KeyComponents = keyComponents,
-                Issues = issues.Count > 0 ? issues.ToArray() : null,
-                Children = children.Count > 0 ? children.ToArray() : null
-            };
-        }
 
         /// <summary>すべての子オブジェクトを収集</summary>
-        void CollectAllChildren(GameObject parent, List<GameObject> allObjects)
-        {
-            allObjects.Add(parent);
-            for (int i = 0; i < parent.transform.childCount; i++)
-            {
-                CollectAllChildren(parent.transform.GetChild(i).gameObject, allObjects);
-            }
-        }
+
 
         /// <summary>最大深度を計算</summary>
         int CalculateMaxDepth(GameObject rootObject)
@@ -1149,256 +1027,36 @@ namespace uMCP.Editor.Tools
         }
 
         /// <summary>UI要素を分析</summary>
-        void AnalyzeUIElements(List<GameObject> allObjects, UIAnalysis uiElements)
-        {
-            foreach (var obj in allObjects)
-            {
-                var components = obj.GetComponents<Component>();
-                foreach (var component in components)
-                {
-                    if (component == null) continue;
-                    
-                    var typeName = component.GetType().Name;
-                    switch (typeName)
-                    {
-                        case "Canvas":
-                            uiElements.CanvasCount++;
-                            break;
-                        case "Button":
-                            uiElements.ButtonCount++;
-                            break;
-                        case "Text":
-                        case "TextMeshPro":
-                        case "TextMeshProUGUI":
-                            uiElements.TextCount++;
-                            break;
-                        case "Image":
-                        case "RawImage":
-                            uiElements.ImageCount++;
-                            break;
-                        case "InputField":
-                        case "TMP_InputField":
-                            uiElements.InputCount++;
-                            break;
-                        case "HorizontalLayoutGroup":
-                        case "VerticalLayoutGroup":
-                        case "GridLayoutGroup":
-                            uiElements.LayoutGroups++;
-                            break;
-                        default:
-                            if (component.GetType().Namespace != null && 
-                                !component.GetType().Namespace.StartsWith("UnityEngine"))
-                            {
-                                uiElements.CustomUICount++;
-                            }
-                            break;
-                    }
-                }
-            }
 
-            uiElements.UIStructure = DetermineUIStructure(uiElements);
-        }
 
         /// <summary>パフォーマンス問題を分析</summary>
-        void AnalyzePerformance(List<GameObject> allObjects, List<string> concerns)
-        {
-            if (allObjects.Count > 100)
-            {
-                concerns.Add($"Large hierarchy: {allObjects.Count} objects may impact performance");
-            }
 
-            var canvasCount = allObjects.Count(obj => obj.GetComponent<Canvas>() != null);
-            if (canvasCount > 3)
-            {
-                concerns.Add($"Multiple Canvas components ({canvasCount}) may cause overdraw");
-            }
-
-            var imageCount = allObjects.Count(obj => obj.GetComponent<UnityEngine.UI.Image>() != null);
-            if (imageCount > 20)
-            {
-                concerns.Add($"Many Image components ({imageCount}) may impact fill rate");
-            }
-        }
 
         /// <summary>デザイン問題を分析</summary>
-        void AnalyzeDesign(List<GameObject> allObjects, List<string> issues)
-        {
-            var inactiveObjects = allObjects.Where(obj => !obj.activeSelf).ToList();
-            if (inactiveObjects.Count > allObjects.Count * 0.3f)
-            {
-                issues.Add($"Many inactive objects ({inactiveObjects.Count}/{allObjects.Count}) - consider cleanup");
-            }
 
-            var untaggedObjects = allObjects.Where(obj => obj.tag == "Untagged").ToList();
-            if (untaggedObjects.Count > allObjects.Count * 0.8f)
-            {
-                issues.Add("Most objects are untagged - consider proper tagging for organization");
-            }
-
-            var layoutGroups = allObjects.Count(obj => 
-                obj.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>() != null ||
-                obj.GetComponent<UnityEngine.UI.VerticalLayoutGroup>() != null ||
-                obj.GetComponent<UnityEngine.UI.GridLayoutGroup>() != null);
-            
-            var uiElements = allObjects.Count(obj => 
-                obj.GetComponent<UnityEngine.UI.Image>() != null ||
-                obj.GetComponent<UnityEngine.UI.Button>() != null);
-
-            if (uiElements > 5 && layoutGroups == 0)
-            {
-                issues.Add("UI elements without layout management - consider using Layout Groups");
-            }
-        }
 
         /// <summary>参照の欠落を分析</summary>
-        void AnalyzeMissingReferences(List<GameObject> allObjects, List<string> missing)
-        {
-            foreach (var obj in allObjects)
-            {
-                var components = obj.GetComponents<Component>();
-                foreach (var component in components)
-                {
-                    if (component == null) continue;
 
-                    // カスタムコンポーネントの参照チェック
-                    if (component.GetType().Namespace != null && 
-                        !component.GetType().Namespace.StartsWith("UnityEngine"))
-                    {
-                        CheckMissingReferences(component, missing);
-                    }
-                }
-            }
-        }
 
         /// <summary>推奨事項を生成</summary>
-        void GenerateRecommendations(List<GameObject> allObjects, UIAnalysis uiElements, List<string> recommendations)
-        {
-            if (uiElements.LayoutGroups == 0 && (uiElements.ButtonCount + uiElements.ImageCount) > 3)
-            {
-                recommendations.Add("Add Layout Groups for better UI organization and responsive design");
-            }
 
-            if (uiElements.CustomUICount > 0)
-            {
-                recommendations.Add("Verify custom UI components have proper references and are functioning correctly");
-            }
-
-            if (allObjects.Count > 50)
-            {
-                recommendations.Add("Consider object pooling or LOD system for performance optimization");
-            }
-
-            var canvasObjects = allObjects.Where(obj => obj.GetComponent<Canvas>() != null).ToList();
-            if (canvasObjects.Count > 1)
-            {
-                recommendations.Add("Multiple Canvas detected - ensure proper render order and consider merging if possible");
-            }
-        }
 
         /// <summary>重要なコンポーネントかチェック</summary>
-        bool IsKeyComponent(string componentName)
-        {
-            var keyComponents = new[] 
-            { 
-                "Canvas", "Button", "Image", "Text", "TextMeshPro", "TextMeshProUGUI",
-                "Slider", "InputField", "ScrollRect", "LayoutGroup", "ContentSizeFitter"
-            };
-            
-            return keyComponents.Any(key => componentName.Contains(key)) || 
-                   !componentName.StartsWith("UnityEngine");
-        }
+
 
         /// <summary>オブジェクト固有の問題を分析</summary>
-        void AnalyzeObjectIssues(GameObject gameObject, List<string> issues)
-        {
-            if (!gameObject.activeSelf)
-            {
-                issues.Add("Object is inactive");
-            }
 
-            var image = gameObject.GetComponent<UnityEngine.UI.Image>();
-            if (image != null && image.sprite == null)
-            {
-                issues.Add("Image component without sprite");
-            }
-
-            var button = gameObject.GetComponent<UnityEngine.UI.Button>();
-            if (button != null && !button.interactable)
-            {
-                issues.Add("Button is not interactable");
-            }
-        }
 
         /// <summary>参照の欠落をチェック</summary>
-        void CheckMissingReferences(Component component, List<string> missing)
-        {
-            var componentType = component.GetType();
-            var fields = componentType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-            
-            foreach (var field in fields)
-            {
-                if (typeof(Object).IsAssignableFrom(field.FieldType))
-                {
-                    var value = field.GetValue(component);
-                    if (value == null)
-                    {
-                        missing.Add($"{component.gameObject.name}.{componentType.Name}.{field.Name} is null");
-                    }
-                }
-            }
-        }
+
 
         /// <summary>UI構造のタイプを判定</summary>
-        string DetermineUIStructure(UIAnalysis ui)
-        {
-            if (ui.CanvasCount == 0) return "Non-UI Structure";
-            if (ui.LayoutGroups > 0) return "Managed Layout";
-            if (ui.ButtonCount > 0 || ui.InputCount > 0) return "Interactive UI";
-            if (ui.ImageCount > 0 || ui.TextCount > 0) return "Display UI";
-            return "Basic Canvas";
-        }
+
     }
 
-    /// <summary>階層分析結果</summary>
-    public class HierarchyAnalysis
-    {
-        public int TotalObjects { get; set; }
-        public int MaxDepth { get; set; }
-        public UIAnalysis UIElements { get; set; }
-        public string[] PerformanceConcerns { get; set; }
-        public string[] DesignIssues { get; set; }
-        public string[] MissingReferences { get; set; }
-        public string[] Recommendations { get; set; }
-    }
 
-    /// <summary>階層ノード</summary>
-    public class HierarchyNode
-    {
-        public string Name { get; set; }
-        public string Type { get; set; }
-        public bool Active { get; set; }
-        public string Tag { get; set; }
-        public string Layer { get; set; }
-        public int ComponentCount { get; set; }
-        public string[] KeyComponents { get; set; }
-        public string[] Issues { get; set; }
-        public HierarchyNode[] Children { get; set; }
-    }
 
-    /// <summary>UI分析結果</summary>
-    public class UIAnalysis
-    {
-        public int CanvasCount { get; set; }
-        public int ButtonCount { get; set; }
-        public int ImageCount { get; set; }
-        public int TextCount { get; set; }
-        public int InputCount { get; set; }
-        public int LayoutGroups { get; set; }
-        public int ScrollViews { get; set; }
-        public int Sliders { get; set; }
-        public int Toggles { get; set; }
-        public int Dropdowns { get; set; }
-        public int CustomUICount { get; set; }
-        public string UIStructure { get; set; }
-    }
+
+
+
 }

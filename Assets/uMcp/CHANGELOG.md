@@ -5,6 +5,21 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [1.0.6] - 2025-08-19
+
+### Removed
+- **GetHierarchyAnalysis削除**: 機能重複によりコードベース大幅簡素化
+  - GetHierarchyAnalysisメソッド（特定オブジェクト分析機能）
+  - 関連する未使用分析メソッド群（AnalyzeUIElements, AnalyzePerformance, AnalyzeDesign等）
+  - 関連クラス定義（HierarchyAnalysis, HierarchyNode, UIAnalysis）
+
+### Improved  
+- **GetSceneInfo強化**: 完全な階層構造表示機能を統合
+  - 再帰的な子オブジェクト表示（ツリー構造の視覚化）
+  - 統計情報追加（総オブジェクト数、最大階層深度、アクティブ状態カウント）
+  - アクティブ状態アイコンとコンポーネント情報表示
+- **コードベース簡素化**: ツール数26→25に整理、保守性向上
+
 ## [1.0.5] - 2025-08-18
 
 ### Removed

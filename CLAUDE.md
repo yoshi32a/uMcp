@@ -124,12 +124,11 @@ var sortedCandidates = candidateScores
 
 ## MCPサーバー機能
 
-### ビルトインツールセット（全26ツール）
+### ビルトインツールセット（全25ツール）
 
-#### Unity情報ツール（6ツール）
+#### Unity情報ツール（5ツール）
 - **get_unity_info**: Unity エディターとプロジェクトの詳細情報
-- **get_scene_info**: 現在のシーン構造とGameObject分析
-- **get_hierarchy_analysis**: 指定GameObjectとその子階層の構造を詳細分析
+- **get_scene_info**: 現在のシーン構造とGameObject分析（完全な階層表示対応）
 - **get_game_object_info**: 指定GameObjectの詳細情報を取得
 - **get_prefab_info**: 指定Prefabの詳細情報を取得
 - **detect_missing_scripts**: シーン内のMissing Script（nullコンポーネント）を検出

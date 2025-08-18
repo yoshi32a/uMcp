@@ -100,13 +100,13 @@ namespace uMCP.Editor.Tools
                 {
                     allGameObjects.Add(root);
                     allGameObjects.AddRange(GetAllChildGameObjects(root));
-                    
+
                     int rootDepth = CalculateMaxDepth(root);
                     maxDepth = Math.Max(maxDepth, rootDepth);
-                    
+
                     if (root.activeInHierarchy) totalActiveObjects++;
                     else totalInactiveObjects++;
-                    
+
                     // 子オブジェクトの状態もカウント
                     foreach (var child in GetAllChildGameObjects(root))
                     {
@@ -126,7 +126,7 @@ namespace uMCP.Editor.Tools
 
                 // 階層構造表示
                 info.AppendLine("## 🌳 階層構造");
-                
+
                 foreach (var root in rootGameObjects)
                 {
                     DisplayGameObjectHierarchy(root, info, "", true);
@@ -143,7 +143,6 @@ namespace uMCP.Editor.Tools
                 FormattedOutput = info.ToString()
             };
         }
-
 
 
         /// <summary>指定したGameObjectの詳細情報を取得</summary>
@@ -210,6 +209,7 @@ namespace uMCP.Editor.Tools
             {
                 info.AppendLine($"**親オブジェクト:** {transform.parent.name} (順序: {transform.GetSiblingIndex()})");
             }
+
             info.AppendLine();
 
             // コンポーネント情報
@@ -229,7 +229,7 @@ namespace uMCP.Editor.Tools
                     _ when componentName.Contains("Audio") => "🔊",
                     _ => "⚙️"
                 };
-                
+
                 var enabled = component is Behaviour behaviour ? (behaviour.enabled ? "✅" : "❌") : "";
                 info.AppendLine($"{componentIcon} **{componentName}** {enabled}");
             }
@@ -301,7 +301,7 @@ namespace uMCP.Editor.Tools
                 var componentIcon = componentName switch
                 {
                     "Transform" => "🔄",
-                    "Camera" => "📷",  
+                    "Camera" => "📷",
                     "Light" => "💡",
                     "Renderer" or "MeshRenderer" or "SkinnedMeshRenderer" => "🎨",
                     "Collider" or "BoxCollider" or "SphereCollider" or "MeshCollider" => "🎯",
@@ -310,7 +310,7 @@ namespace uMCP.Editor.Tools
                     _ when componentName.Contains("Audio") => "🔊",
                     _ => "⚙️"
                 };
-                
+
                 var enabled = component is Behaviour behaviour ? (behaviour.enabled ? "✅" : "❌") : "";
                 info.AppendLine($"{componentIcon} **{componentName}** {enabled}");
             }
@@ -326,6 +326,7 @@ namespace uMCP.Editor.Tools
                     var childIcon = GetGameObjectIcon(child.gameObject);
                     info.AppendLine($"{childIcon} **{child.name}**");
                 }
+
                 if (transform.childCount > 10)
                 {
                     info.AppendLine($"   ...他 {transform.childCount - 10}件");
@@ -342,7 +343,8 @@ namespace uMCP.Editor.Tools
         /// <summary>Missing Script（Nullコンポーネント）を持つGameObjectを検出</summary>
         [McpServerTool, Description("シーン内のMissing Script（Nullコンポーネント）を持つGameObjectを検出して詳細情報を取得")]
         public async ValueTask<object> DetectMissingScripts(
-            [Description("検索対象（All/ActiveOnly/InactiveOnly）")] string searchScope = "All",
+            [Description("検索対象（All/ActiveOnly/InactiveOnly）")]
+            string searchScope = "All",
             [Description("詳細情報を含めるか")] bool includeDetails = true)
         {
             await UniTask.SwitchToMainThread();
@@ -357,7 +359,7 @@ namespace uMCP.Editor.Tools
             // 検索対象のGameObjectを取得
             var allGameObjects = new List<GameObject>();
             var loadedScenes = new List<UnityEngine.SceneManagement.Scene>();
-            
+
             for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
             {
                 var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
@@ -384,7 +386,7 @@ namespace uMCP.Editor.Tools
             {
                 var components = go.GetComponents<Component>();
                 var missingCount = components.Count(c => c == null);
-                
+
                 if (missingCount > 0)
                 {
                     totalMissingCount += missingCount;
@@ -404,26 +406,27 @@ namespace uMCP.Editor.Tools
             info.AppendLine($"**検査GameObject数:** {allGameObjects.Count}件");
             info.AppendLine($"**問題のあるGameObject数:** {missingScriptObjects.Count}件");
             info.AppendLine($"**Missing Script総数:** {totalMissingCount}件");
-            
+
             if (missingScriptObjects.Count > 0)
             {
                 var avgMissing = (float)totalMissingCount / missingScriptObjects.Count;
                 info.AppendLine($"**平均Missing数/GameObject:** {avgMissing:F1}件");
             }
+
             info.AppendLine();
 
             // 問題のあるGameObjectリスト
             if (missingScriptObjects.Count > 0)
             {
                 info.AppendLine("## ⚠️ Missing Scriptを持つGameObject一覧");
-                
+
                 // シーンごとにグループ化
                 var groupedByScene = missingScriptObjects.GroupBy(x => x.SceneName);
-                
+
                 foreach (var sceneGroup in groupedByScene)
                 {
                     info.AppendLine($"\n### 📋 シーン: {sceneGroup.Key}");
-                    
+
                     int displayCount = 0;
                     foreach (var item in sceneGroup.OrderByDescending(x => x.MissingCount).Take(50))
                     {
@@ -431,7 +434,7 @@ namespace uMCP.Editor.Tools
                         var icon = item.GameObject.activeInHierarchy ? "🔴" : "⚫";
                         info.AppendLine($"{icon} **{item.Path}**");
                         info.AppendLine($"   Missing: {item.MissingCount}個 / 全{item.TotalComponents}個のコンポーネント");
-                        
+
                         if (includeDetails)
                         {
                             // 有効なコンポーネントの詳細
@@ -439,7 +442,7 @@ namespace uMCP.Editor.Tools
                                 .Where(c => c != null)
                                 .Select(c => c.GetType().Name)
                                 .ToArray();
-                            
+
                             if (validComponents.Length > 0)
                             {
                                 info.AppendLine($"   有効: {string.Join(", ", validComponents.Take(5))}");
@@ -449,15 +452,16 @@ namespace uMCP.Editor.Tools
                                 }
                             }
                         }
+
                         info.AppendLine();
                     }
-                    
+
                     if (sceneGroup.Count() > 50)
                     {
                         info.AppendLine($"   ...他 {sceneGroup.Count() - 50}個のGameObject");
                     }
                 }
-                
+
                 // 推奨アクション
                 info.AppendLine("\n## 💡 推奨アクション");
                 info.AppendLine("1. **スクリプトの復元**: 削除したスクリプトが必要な場合は、バージョン管理から復元");
@@ -498,14 +502,14 @@ namespace uMCP.Editor.Tools
             var validComponents = components.Where(c => c != null).ToArray();
             var icon = GetGameObjectIcon(gameObject);
             var statusIcon = gameObject.activeInHierarchy ? "✅" : "❌";
-            
+
             // 階層表示用の線
             var connector = isLast ? "└─ " : "├─ ";
             var childPrefix = isLast ? "    " : "│   ";
 
             info.AppendLine($"{prefix}{connector}{statusIcon} {icon} **{gameObject.name}** ({validComponents.Length}コンポーネント)");
             info.AppendLine($"{prefix}{childPrefix}   Tag: {gameObject.tag} | Layer: {LayerMask.LayerToName(gameObject.layer)}");
-            
+
             // 有効なコンポーネント一覧（簡潔に）
             if (validComponents.Length > 0)
             {
@@ -515,9 +519,10 @@ namespace uMCP.Editor.Tools
                 {
                     componentList += $", ...他{validComponents.Length - 3}個";
                 }
+
                 info.AppendLine($"{prefix}{childPrefix}   Components: {componentList}");
             }
-            
+
             // 子オブジェクトの処理
             var childCount = gameObject.transform.childCount;
             for (int i = 0; i < childCount; i++)
@@ -552,13 +557,13 @@ namespace uMCP.Editor.Tools
         {
             var path = gameObject.name;
             var parent = gameObject.transform.parent;
-            
+
             while (parent != null)
             {
                 path = parent.name + "/" + path;
                 parent = parent.parent;
             }
-            
+
             return path;
         }
 
@@ -569,7 +574,7 @@ namespace uMCP.Editor.Tools
             {
                 var child = parent.GetChild(i);
                 yield return child.name;
-                
+
                 foreach (var grandChild in GetChildrenRecursive(child))
                 {
                     yield return child.name + "/" + grandChild;
@@ -577,53 +582,7 @@ namespace uMCP.Editor.Tools
             }
         }
 
-        /// <summary>階層構造をテキスト形式で構築</summary>
-        void BuildHierarchyText(HierarchyNode node, System.Text.StringBuilder sb, string prefix, int depth)
-        {
-            if (depth > 10) // 深すぎる階層は制限
-            {
-                sb.AppendLine($"{prefix}... (階層が深すぎます)");
-                return;
-            }
 
-            var icon = node.Type switch
-            {
-                "UI Canvas" => "🖼️",
-                "Camera" => "📷",
-                "Light" => "💡",
-                "Audio" => "🔊",
-                "Empty" => "📦",
-                _ => "🎮"
-            };
-
-            var status = node.Active ? "" : " (非アクティブ)";
-            var issues = node.Issues?.Length > 0 ? $" ⚠️({node.Issues.Length})" : "";
-            
-            sb.AppendLine($"{prefix}{icon} **{node.Name}**{status}{issues}");
-            sb.AppendLine($"{prefix}   {node.ComponentCount}コンポーネント | Tag: {node.Tag} | Layer: {node.Layer}");
-
-            if (node.Issues?.Length > 0)
-            {
-                foreach (var issue in node.Issues.Take(2)) // 最大2件まで表示
-                {
-                    sb.AppendLine($"{prefix}   ⚠️ {issue}");
-                }
-            }
-
-            if (node.Children?.Length > 0)
-            {
-                var childPrefix = prefix + "  ";
-                foreach (var child in node.Children.Take(20)) // 最大20件まで表示
-                {
-                    BuildHierarchyText(child, sb, childPrefix, depth + 1);
-                }
-                
-                if (node.Children.Length > 20)
-                {
-                    sb.AppendLine($"{childPrefix}... 他 {node.Children.Length - 20}件の子オブジェクト");
-                }
-            }
-        }
 
         /// <summary>GameObjectの種類を推定</summary>
         string GetGameObjectIcon(GameObject gameObject)
@@ -645,7 +604,7 @@ namespace uMCP.Editor.Tools
             var components = gameObject.GetComponents<Component>();
             // Componentのnullチェック
             var validComponents = components.Where(c => c != null).ToArray();
-            
+
             if (validComponents.Any(c => c.GetType().Name == "Canvas"))
                 return "UI Canvas";
             if (validComponents.Any(c => c.GetType().Name == "Camera"))
@@ -660,7 +619,7 @@ namespace uMCP.Editor.Tools
                 return "Physics Object";
             if (validComponents.Any(c => c.GetType().Name == "AudioSource"))
                 return "Audio Source";
-                
+
             return "GameObject";
         }
 
@@ -669,7 +628,7 @@ namespace uMCP.Editor.Tools
         {
             var typeName = componentType.Name;
             var namespaceName = componentType.Namespace;
-            
+
             if (typeName.Contains("Transform"))
                 return "Transform";
             if (namespaceName == "UnityEngine.UI")
@@ -691,7 +650,7 @@ namespace uMCP.Editor.Tools
             // カスタムUIコンポーネントの判定を追加
             if (typeName.Contains("UI") && namespaceName != "UnityEngine.UI")
                 return "Custom UI";
-                
+
             return "Custom";
         }
 
@@ -699,7 +658,7 @@ namespace uMCP.Editor.Tools
         string GetComponentDescription(Type componentType)
         {
             var typeName = componentType.Name;
-            
+
             return typeName switch
             {
                 "Transform" => "Position, rotation, and scale of the object",
@@ -723,13 +682,13 @@ namespace uMCP.Editor.Tools
         {
             int depth = 0;
             var parent = transform.parent;
-            
+
             while (parent != null)
             {
                 depth++;
                 parent = parent.parent;
             }
-            
+
             return depth;
         }
 
@@ -916,11 +875,13 @@ namespace uMCP.Editor.Tools
                 var v = (Vector2)value;
                 return FormatVector2(v);
             }
+
             if (valueType == typeof(Vector3))
             {
                 var v = (Vector3)value;
                 return $"({v.x:F2}, {v.y:F2}, {v.z:F2})";
             }
+
             if (valueType == typeof(Vector4))
             {
                 var v = (Vector4)value;
@@ -996,19 +957,13 @@ namespace uMCP.Editor.Tools
         object GetObjectReference(Object obj)
         {
             if (obj == null) return "null";
-            
+
             return $"{obj.name} ({obj.GetType().Name})";
         }
 
         /// <summary>階層構造を分析</summary>
-
-
         /// <summary>階層ノードを構築</summary>
-
-
         /// <summary>すべての子オブジェクトを収集</summary>
-
-
         /// <summary>最大深度を計算</summary>
         int CalculateMaxDepth(GameObject rootObject)
         {
@@ -1051,12 +1006,5 @@ namespace uMCP.Editor.Tools
 
 
         /// <summary>UI構造のタイプを判定</summary>
-
     }
-
-
-
-
-
-
 }

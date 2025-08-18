@@ -19,10 +19,10 @@ namespace uMCP.Editor.Tools
             await UniTask.SwitchToMainThread();
 
             var startTime = DateTime.Now;
-            
+
             // シンプルにリフレッシュのみ
             AssetDatabase.Refresh();
-            
+
             var duration = (DateTime.Now - startTime).TotalMilliseconds;
 
             var info = new System.Text.StringBuilder();
@@ -107,7 +107,7 @@ namespace uMCP.Editor.Tools
             // プロジェクトアセット（Assets/以下）を優先し、パッケージアセットは後回し
             var projectAssets = allResults.Where(r => r.Path.StartsWith("Assets/")).Take(maxResults).ToList();
             var packageAssets = allResults.Where(r => r.Path.StartsWith("Packages/")).Take(Math.Max(0, maxResults - projectAssets.Count)).ToList();
-            
+
             var results = projectAssets.Concat(packageAssets).ToArray();
 
             // 読みやすい形式のサマリーを作成
@@ -127,6 +127,7 @@ namespace uMCP.Editor.Tools
                 {
                     summary.AppendLine($"- {group.Key}: {group.Count()}件");
                 }
+
                 summary.AppendLine();
 
                 // プロジェクトアセットとパッケージアセットの分別表示
@@ -137,10 +138,12 @@ namespace uMCP.Editor.Tools
                     {
                         summary.AppendLine($"- **{asset.Name}** ({asset.Type}) - {asset.Path}");
                     }
+
                     if (projectAssets.Count > 10)
                     {
                         summary.AppendLine($"  ...他 {projectAssets.Count - 10}件");
                     }
+
                     summary.AppendLine();
                 }
 
@@ -151,6 +154,7 @@ namespace uMCP.Editor.Tools
                     {
                         summary.AppendLine($"- **{asset.Name}** ({asset.Type}) - {asset.Path}");
                     }
+
                     if (packageAssets.Count > 5)
                     {
                         summary.AppendLine($"  ...他 {packageAssets.Count - 5}件");
@@ -167,123 +171,6 @@ namespace uMCP.Editor.Tools
                 Success = true,
                 FormattedOutput = summary.ToString()
             };
-        }
-
-        /// <summary>アセットの詳細情報を取得</summary>
-        [McpServerTool, Description("指定したパスのアセットの詳細情報を読みやすい形式で取得")]
-        public async ValueTask<object> GetAssetInfo([Description("アセットのパス")] string assetPath)
-        {
-            await UniTask.SwitchToMainThread();
-
-            if (string.IsNullOrEmpty(assetPath))
-            {
-                return new ErrorResponse
-                {
-                    Success = false,
-                    Error = "Asset path is required"
-                };
-            }
-
-            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
-            if (!asset)
-            {
-                return new ErrorResponse
-                {
-                    Success = false,
-                    Error = $"Asset not found at path: {assetPath}"
-                };
-            }
-
-            var guid = AssetDatabase.AssetPathToGUID(assetPath);
-            var importer = AssetImporter.GetAtPath(assetPath);
-            var dependencies = AssetDatabase.GetDependencies(assetPath, false);
-
-            var info = new System.Text.StringBuilder();
-            info.AppendLine($"=== アセット詳細: {asset.name} ===");
-            info.AppendLine($"**パス:** {assetPath}");
-            info.AppendLine($"**GUID:** {guid}");
-            info.AppendLine();
-
-            // 基本情報
-            info.AppendLine("## 📋 基本情報");
-            var icon = asset.GetType().Name switch
-            {
-                "SceneAsset" => "🎬",
-                "GameObject" => "🎮", 
-                "Material" => "🎨",
-                "Texture2D" => "🖼️",
-                "AudioClip" => "🔊",
-                "MonoScript" => "📜",
-                "Shader" => "✨",
-                "Mesh" => "📐",
-                _ => "📄"
-            };
-            
-            info.AppendLine($"{icon} **{asset.name}** ({asset.GetType().Name})");
-            info.AppendLine($"**サイズ:** {FormatFileSize(File.Exists(assetPath) ? new FileInfo(assetPath).Length : 0)}");
-            info.AppendLine($"**最終更新:** {(File.Exists(assetPath) ? File.GetLastWriteTime(assetPath).ToString("yyyy-MM-dd HH:mm:ss") : "不明")}");
-            info.AppendLine($"**インポーター:** {(importer ? importer.GetType().Name : "なし")}");
-            info.AppendLine();
-
-            // ラベル
-            var labels = AssetDatabase.GetLabels(asset);
-            if (labels.Length > 0)
-            {
-                info.AppendLine("## 🏷️ ラベル");
-                foreach (var label in labels)
-                {
-                    info.AppendLine($"- {label}");
-                }
-                info.AppendLine();
-            }
-
-            // 依存関係
-            if (dependencies.Length > 0)
-            {
-                info.AppendLine($"## 🔗 依存関係 ({dependencies.Length}件)");
-                foreach (var dep in dependencies.Take(10))
-                {
-                    var depAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(dep);
-                    var depIcon = depAsset?.GetType().Name switch
-                    {
-                        "Material" => "🎨",
-                        "Texture2D" => "🖼️",
-                        "MonoScript" => "📜",
-                        "Shader" => "✨",
-                        _ => "📄"
-                    };
-                    info.AppendLine($"{depIcon} **{Path.GetFileNameWithoutExtension(dep)}** - {dep}");
-                }
-                if (dependencies.Length > 10)
-                {
-                    info.AppendLine($"   ...他 {dependencies.Length - 10}件");
-                }
-            }
-
-            return new StandardResponse
-            {
-                Success = true,
-                FormattedOutput = info.ToString()
-            };
-        }
-
-
-        /// <summary>ファイルサイズを読みやすい形式にフォーマット</summary>
-        string FormatFileSize(long bytes)
-        {
-            if (bytes == 0) return "0 B";
-            
-            var units = new[] { "B", "KB", "MB", "GB" };
-            var unitIndex = 0;
-            var size = (double)bytes;
-            
-            while (size >= 1024 && unitIndex < units.Length - 1)
-            {
-                size /= 1024;
-                unitIndex++;
-            }
-            
-            return $"{size:F1} {units[unitIndex]}";
         }
     }
 }

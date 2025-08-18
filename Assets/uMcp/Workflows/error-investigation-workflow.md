@@ -53,5 +53,5 @@
 
 ## 推奨される次のアクション
 - 問題が解決した場合: save_project
-- 追加調査が必要な場合: get_hierarchy_analysis
+- 追加調査が必要な場合: get_game_object_info
 - コードの修正が必要な場合: refresh_assets → execute_editor_method

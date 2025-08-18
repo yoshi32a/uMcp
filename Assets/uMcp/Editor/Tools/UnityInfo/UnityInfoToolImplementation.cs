@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -64,11 +65,11 @@ namespace uMCP.Editor.Tools
             info.AppendLine($"**GPU:** {SystemInfo.graphicsDeviceName}");
             info.AppendLine($"**GPU メモリ:** {SystemInfo.graphicsMemorySize} MB");
 
-            return new StandardResponse
+            return new ValueTask<object>(new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            };
+            });
         }
 
         /// <summary>現在のシーン情報を取得</summary>
@@ -137,11 +138,11 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("**シーンは空です。**");
             }
 
-            return new StandardResponse
+            return new ValueTask<object>(new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            };
+            });
         }
 
 
@@ -234,47 +235,58 @@ namespace uMCP.Editor.Tools
                 info.AppendLine($"{componentIcon} **{componentName}** {enabled}");
             }
 
-            return new StandardResponse
+            return new ValueTask<object>(new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            };
+            });
         }
 
-        /// <summary>指定したPrefabの詳細情報を取得</summary>
-        [McpServerTool, Description("指定したPrefabの詳細情報を読みやすい形式で取得")]
-        public async ValueTask<object> GetPrefabInfo(
-            [Description("Prefabのアセットパス")] string prefabPath)
+        [McpServerTool, Description("指定したアセット（Prefab、Scene、その他）の詳細情報を読みやすい形式で取得")]
+        public async ValueTask<object> GetAssetInfo([Description("アセットのパス")] string assetPath)
         {
             await UniTask.SwitchToMainThread();
 
-            if (string.IsNullOrEmpty(prefabPath))
+            if (string.IsNullOrEmpty(assetPath))
             {
                 return new ErrorResponse
                 {
                     Success = false,
-                    Error = "Prefab path is required"
+                    Error = "Asset path is required"
                 };
             }
 
-            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            if (prefabAsset == null)
+            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
+            if (!asset)
             {
                 return new ErrorResponse
                 {
                     Success = false,
-                    Error = $"Prefab not found at path: {prefabPath}"
+                    Error = $"Asset not found at path: {assetPath}"
                 };
             }
 
+            // Prefabの場合は階層情報も表示
+            if (asset is GameObject prefabAsset)
+            {
+                return GetPrefabAssetInfo(prefabAsset, assetPath);
+            }
+
+            // その他のアセット
+            return GetGeneralAssetInfo(asset, assetPath);
+        }
+
+        /// <summary>Prefabアセットの詳細情報を取得</summary>
+        object GetPrefabAssetInfo(GameObject prefabAsset, string assetPath)
+        {
             var components = prefabAsset.GetComponents<Component>();
-            // Componentのnullチェック
             var validComponents = components.Where(c => c != null).ToArray();
             var transform = prefabAsset.transform;
 
             var info = new System.Text.StringBuilder();
-            info.AppendLine($"=== Prefab詳細: {prefabAsset.name} ===");
-            info.AppendLine($"**アセットパス:** {prefabPath}");
+            info.AppendLine($"=== Prefabアセット詳細: {prefabAsset.name} ===");
+            info.AppendLine($"**アセットパス:** {assetPath}");
+            info.AppendLine($"**GUID:** {AssetDatabase.AssetPathToGUID(assetPath)}");
             info.AppendLine();
 
             // 基本情報
@@ -283,7 +295,13 @@ namespace uMCP.Editor.Tools
             info.AppendLine("## 📋 基本情報");
             info.AppendLine($"{icon} **{prefabAsset.name}** ({type})");
             info.AppendLine($"**Tag:** {prefabAsset.tag} | **Layer:** {LayerMask.LayerToName(prefabAsset.layer)}");
-            info.AppendLine($"**子オブジェクト数:** {transform.childCount}件");
+            info.AppendLine($"**サイズ:** {FormatFileSize(File.Exists(assetPath) ? new FileInfo(assetPath).Length : 0)}");
+
+            // 階層統計
+            var totalObjects = 1 + GetAllChildGameObjects(prefabAsset).Count();
+            var maxDepth = 0;
+            CalculateDepthRecursive(transform, 0, ref maxDepth);
+            info.AppendLine($"**階層統計:** {totalObjects}オブジェクト | 最大階層: {maxDepth}");
             info.AppendLine();
 
             // Transform情報
@@ -315,21 +333,32 @@ namespace uMCP.Editor.Tools
                 info.AppendLine($"{componentIcon} **{componentName}** {enabled}");
             }
 
-            // 子オブジェクト
+            // 階層構造
             if (transform.childCount > 0)
             {
                 info.AppendLine();
-                info.AppendLine($"## 👶 子オブジェクト ({transform.childCount}件)");
-                for (int i = 0; i < Math.Min(transform.childCount, 10); i++)
+                info.AppendLine($"## 🌳 階層構造");
+                info.AppendLine($"📦 **{prefabAsset.name}** (Root)");
+                DisplayGameObjectHierarchy(prefabAsset, info, "", true);
+            }
+
+            // アセット依存関係
+            var dependencies = AssetDatabase.GetDependencies(assetPath, false);
+            if (dependencies.Length > 1) // 自分自身を除く
+            {
+                info.AppendLine();
+                info.AppendLine($"## 🔗 アセット依存関係 ({dependencies.Length - 1}件)");
+                foreach (var dep in dependencies.Where(d => d != assetPath).Take(10))
                 {
-                    var child = transform.GetChild(i);
-                    var childIcon = GetGameObjectIcon(child.gameObject);
-                    info.AppendLine($"{childIcon} **{child.name}**");
+                    var depAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(dep);
+                    var depIcon = GetAssetTypeIcon(depAsset?.GetType().Name);
+                    var depName = Path.GetFileNameWithoutExtension(dep);
+                    info.AppendLine($"  {depIcon} **{depName}** - {dep}");
                 }
 
-                if (transform.childCount > 10)
+                if (dependencies.Length > 11)
                 {
-                    info.AppendLine($"   ...他 {transform.childCount - 10}件");
+                    info.AppendLine($"     ...他 {dependencies.Length - 11}件");
                 }
             }
 
@@ -338,6 +367,129 @@ namespace uMCP.Editor.Tools
                 Success = true,
                 FormattedOutput = info.ToString()
             };
+        }
+
+        /// <summary>一般アセットの詳細情報を取得</summary>
+        object GetGeneralAssetInfo(UnityEngine.Object asset, string assetPath)
+        {
+            var guid = AssetDatabase.AssetPathToGUID(assetPath);
+            var importer = AssetImporter.GetAtPath(assetPath);
+            var directDependencies = AssetDatabase.GetDependencies(assetPath, false);
+            var allDependencies = AssetDatabase.GetDependencies(assetPath, true);
+
+            var info = new System.Text.StringBuilder();
+            info.AppendLine($"=== アセット詳細: {asset.name} ===");
+            info.AppendLine($"**パス:** {assetPath}");
+            info.AppendLine($"**GUID:** {guid}");
+            info.AppendLine();
+
+            // 基本情報
+            info.AppendLine("## 📋 基本情報");
+            var icon = GetAssetTypeIcon(asset.GetType().Name);
+
+            info.AppendLine($"{icon} **{asset.name}** ({asset.GetType().Name})");
+            info.AppendLine($"**サイズ:** {FormatFileSize(File.Exists(assetPath) ? new FileInfo(assetPath).Length : 0)}");
+            info.AppendLine($"**最終更新:** {(File.Exists(assetPath) ? File.GetLastWriteTime(assetPath).ToString("yyyy-MM-dd HH:mm:ss") : "不明")}");
+            info.AppendLine($"**インポーター:** {(importer ? importer.GetType().Name : "なし")}");
+            info.AppendLine($"**依存関係統計:** 直接 {directDependencies.Length}件 | 全体 {allDependencies.Length}件");
+            info.AppendLine();
+
+            // ラベル
+            var labels = AssetDatabase.GetLabels(asset);
+            if (labels.Length > 0)
+            {
+                info.AppendLine("## 🏷️ ラベル");
+                foreach (var label in labels)
+                {
+                    info.AppendLine($"- {label}");
+                }
+
+                info.AppendLine();
+            }
+
+            // 直接依存関係
+            if (directDependencies.Length > 0)
+            {
+                info.AppendLine($"## 🔗 直接依存関係 ({directDependencies.Length}件)");
+                foreach (var dep in directDependencies.Take(15))
+                {
+                    var depAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(dep);
+                    var depIcon = GetAssetTypeIcon(depAsset?.GetType().Name);
+                    var depName = Path.GetFileNameWithoutExtension(dep);
+                    var depType = depAsset?.GetType().Name ?? "Unknown";
+                    var size = File.Exists(dep) ? FormatFileSize(new FileInfo(dep).Length) : "0 B";
+                    info.AppendLine($"  {depIcon} **{depName}** ({depType}) - {size}");
+                }
+
+                if (directDependencies.Length > 15)
+                {
+                    info.AppendLine($"     ...他 {directDependencies.Length - 15}件");
+                }
+            }
+
+            // 間接依存関係（全体から直接を除いた分）
+            var indirectDependencies = allDependencies.Except(directDependencies).ToArray();
+            if (indirectDependencies.Length > 0)
+            {
+                info.AppendLine();
+                info.AppendLine($"## 🔄 間接依存関係 ({indirectDependencies.Length}件)");
+                foreach (var dep in indirectDependencies.Take(10))
+                {
+                    var depAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(dep);
+                    var depIcon = GetAssetTypeIcon(depAsset?.GetType().Name);
+                    var depName = Path.GetFileNameWithoutExtension(dep);
+                    var depType = depAsset?.GetType().Name ?? "Unknown";
+                    info.AppendLine($"  {depIcon} **{depName}** ({depType})");
+                }
+
+                if (indirectDependencies.Length > 10)
+                {
+                    info.AppendLine($"     ...他 {indirectDependencies.Length - 10}件");
+                }
+            }
+
+            return new StandardResponse
+            {
+                Success = true,
+                FormattedOutput = info.ToString()
+            };
+        }
+
+        /// <summary>アセットタイプのアイコンを取得</summary>
+        string GetAssetTypeIcon(string typeName)
+        {
+            return typeName switch
+            {
+                "SceneAsset" => "🎬",
+                "GameObject" => "🎮",
+                "Material" => "🎨",
+                "Texture2D" => "🖼️",
+                "AudioClip" => "🔊",
+                "MonoScript" => "📜",
+                "Shader" => "✨",
+                "Mesh" => "📐",
+                "AnimationClip" => "🎭",
+                "Font" => "🔤",
+                _ => "📄"
+            };
+        }
+
+        /// <summary>ファイルサイズを読みやすい形式にフォーマット</summary>
+        string FormatFileSize(long bytes)
+        {
+            if (bytes == 0) return "0 B";
+
+            var units = new[] { "B", "KB", "MB", "GB" };
+            var unitIndex = 0;
+            var size = (double)bytes;
+
+            while (size >= 1024 && unitIndex < units.Length - 1)
+            {
+                size /= 1024;
+                unitIndex++;
+            }
+
+            return $"{size:F1} {units[unitIndex]}";
         }
 
         /// <summary>Missing Script（Nullコンポーネント）を持つGameObjectを検出</summary>
@@ -476,11 +628,11 @@ namespace uMCP.Editor.Tools
                 info.AppendLine("すべてのGameObjectのコンポーネントは正常です。");
             }
 
-            return new StandardResponse
+            return new ValueTask<object>(new StandardResponse
             {
                 Success = true,
                 FormattedOutput = info.ToString()
-            };
+            });
         }
 
         IEnumerable<GameObject> GetAllChildGameObjects(GameObject parent)
@@ -567,23 +719,6 @@ namespace uMCP.Editor.Tools
             return path;
         }
 
-        /// <summary>子オブジェクトを再帰的に取得</summary>
-        IEnumerable<string> GetChildrenRecursive(Transform parent)
-        {
-            for (int i = 0; i < parent.childCount; i++)
-            {
-                var child = parent.GetChild(i);
-                yield return child.name;
-
-                foreach (var grandChild in GetChildrenRecursive(child))
-                {
-                    yield return child.name + "/" + grandChild;
-                }
-            }
-        }
-
-
-
         /// <summary>GameObjectの種類を推定</summary>
         string GetGameObjectIcon(GameObject gameObject)
         {
@@ -591,10 +726,19 @@ namespace uMCP.Editor.Tools
             return type switch
             {
                 "UI Canvas" => "🖼️",
+                "UI Image" => "🖼️",
+                "UI Text" => "📝",
+                "UI Button" => "🔘",
+                "UI ScrollView" => "📜",
+                "UI Scrollbar" => "📏",
+                "UI Element" => "🔘",
                 "Camera" => "📷",
                 "Light" => "💡",
-                "Audio" => "🔊",
-                "Empty" => "📦",
+                "Audio Source" => "🔊",
+                "Rendered Object" => "🎨",
+                "Physics Object" => "⚛️",
+                _ when type.StartsWith("Custom Script") => "📜",
+                "GameObject" => "📦",
                 _ => "🎮"
             };
         }
@@ -605,91 +749,53 @@ namespace uMCP.Editor.Tools
             // Componentのnullチェック
             var validComponents = components.Where(c => c != null).ToArray();
 
+            // UI関連の優先判定
             if (validComponents.Any(c => c.GetType().Name == "Canvas"))
                 return "UI Canvas";
+            if (validComponents.Any(c => c.GetType().Name == "Image" || c.GetType().Name == "RawImage"))
+                return "UI Image";
+            if (validComponents.Any(c => c.GetType().Name == "Text" || c.GetType().Name == "TextMeshPro" || c.GetType().Name == "TextMeshProUGUI"))
+                return "UI Text";
+            if (validComponents.Any(c => c.GetType().Name == "Button"))
+                return "UI Button";
+            if (validComponents.Any(c => c.GetType().Name == "ScrollRect"))
+                return "UI ScrollView";
+            if (validComponents.Any(c => c.GetType().Name == "Scrollbar"))
+                return "UI Scrollbar";
+            if (validComponents.Any(c => c.GetType().Name.Contains("UI") || c.GetType().Namespace == "UnityEngine.UI"))
+                return "UI Element";
+
+            // システムコンポーネント
             if (validComponents.Any(c => c.GetType().Name == "Camera"))
                 return "Camera";
             if (validComponents.Any(c => c.GetType().Name == "Light"))
                 return "Light";
-            if (validComponents.Any(c => c.GetType().Name == "Renderer"))
-                return "Rendered Object";
-            if (validComponents.Any(c => c.GetType().Name.Contains("UI") || c.GetType().Namespace == "UnityEngine.UI"))
-                return "UI Element";
-            if (validComponents.Any(c => c.GetType().Name.Contains("Collider")))
-                return "Physics Object";
             if (validComponents.Any(c => c.GetType().Name == "AudioSource"))
                 return "Audio Source";
 
-            return "GameObject";
-        }
+            // レンダリング関連
+            if (validComponents.Any(c => c.GetType().Name.Contains("Renderer")))
+                return "Rendered Object";
 
-        /// <summary>コンポーネントのカテゴリを取得</summary>
-        string GetComponentCategory(Type componentType)
-        {
-            var typeName = componentType.Name;
-            var namespaceName = componentType.Namespace;
+            // 物理関連
+            if (validComponents.Any(c => c.GetType().Name.Contains("Collider")))
+                return "Physics Object";
+            if (validComponents.Any(c => c.GetType().Name == "Rigidbody"))
+                return "Physics Object";
 
-            if (typeName.Contains("Transform"))
-                return "Transform";
-            if (namespaceName == "UnityEngine.UI")
-                return "UI";
-            if (typeName.Contains("Renderer") || typeName.Contains("Material"))
-                return "Rendering";
-            if (typeName.Contains("Collider") || typeName.Contains("Rigidbody"))
-                return "Physics";
-            if (typeName.Contains("Audio"))
-                return "Audio";
-            if (typeName.Contains("Light"))
-                return "Lighting";
-            if (typeName.Contains("Camera"))
-                return "Camera";
-            if (typeName.Contains("Animation") || typeName.Contains("Animator"))
-                return "Animation";
-            if (namespaceName?.Contains("UnityEngine") == true)
-                return "Unity Built-in";
-            // カスタムUIコンポーネントの判定を追加
-            if (typeName.Contains("UI") && namespaceName != "UnityEngine.UI")
-                return "Custom UI";
+            // 独自スクリプト（MonoBehaviour）の検出
+            var customScripts = validComponents.Where(c =>
+                c is MonoBehaviour &&
+                !c.GetType().Namespace?.StartsWith("UnityEngine") == true &&
+                !c.GetType().Namespace?.StartsWith("UnityEditor") == true).ToArray();
 
-            return "Custom";
-        }
-
-        /// <summary>コンポーネントの説明を取得</summary>
-        string GetComponentDescription(Type componentType)
-        {
-            var typeName = componentType.Name;
-
-            return typeName switch
+            if (customScripts.Length > 0)
             {
-                "Transform" => "Position, rotation, and scale of the object",
-                "RectTransform" => "UI transform component with anchoring and sizing",
-                "Canvas" => "UI rendering component",
-                "CanvasScaler" => "Controls UI scaling behavior",
-                "GraphicRaycaster" => "Handles UI input events",
-                "Camera" => "Renders the scene from a specific viewpoint",
-                "Light" => "Provides lighting to the scene",
-                "MeshRenderer" => "Renders 3D mesh geometry",
-                "SpriteRenderer" => "Renders 2D sprites",
-                "Rigidbody" => "Enables physics simulation",
-                "BoxCollider" => "Box-shaped collision detection",
-                "AudioSource" => "Plays audio clips",
-                _ => $"{typeName} component"
-            };
-        }
-
-        /// <summary>階層の深さを取得</summary>
-        int GetHierarchyDepth(Transform transform)
-        {
-            int depth = 0;
-            var parent = transform.parent;
-
-            while (parent != null)
-            {
-                depth++;
-                parent = parent.parent;
+                var scriptNames = customScripts.Select(c => c.GetType().Name).Take(2);
+                return $"Custom Script ({string.Join(", ", scriptNames)}{(customScripts.Length > 2 ? "..." : "")})";
             }
 
-            return depth;
+            return "GameObject";
         }
 
         /// <summary>コンポーネントのプロパティを取得</summary>
@@ -980,31 +1086,5 @@ namespace uMCP.Editor.Tools
                 CalculateDepthRecursive(transform.GetChild(i), currentDepth + 1, ref maxDepth);
             }
         }
-
-        /// <summary>UI要素を分析</summary>
-
-
-        /// <summary>パフォーマンス問題を分析</summary>
-
-
-        /// <summary>デザイン問題を分析</summary>
-
-
-        /// <summary>参照の欠落を分析</summary>
-
-
-        /// <summary>推奨事項を生成</summary>
-
-
-        /// <summary>重要なコンポーネントかチェック</summary>
-
-
-        /// <summary>オブジェクト固有の問題を分析</summary>
-
-
-        /// <summary>参照の欠落をチェック</summary>
-
-
-        /// <summary>UI構造のタイプを判定</summary>
     }
 }

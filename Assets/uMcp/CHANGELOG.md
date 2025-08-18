@@ -5,6 +5,26 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [1.0.7] - 2025-08-18
+
+### Removed
+- **GetPrefabInfo削除**: GetAssetInfoとの機能重複を解消してツール統合
+  - GetPrefabInfoメソッドを削除（AssetManagementから）
+  - Prefab解析機能をGetAssetInfoに統合（UnityInfoへ移動）
+  - 重複コードの除去により保守性向上
+
+### Changed
+- **GetAssetInfo統合**: アセット情報取得機能を一元化
+  - AssetManagementからUnityInfoカテゴリに移動
+  - Prefabと一般アセット両方を統一インターフェースで処理
+  - 再帰的な依存関係表示とPrefab階層表示を統合
+
+### Improved
+- **ツール数削減**: 25→24ツールに整理
+  - コードベース簡素化と重複機能除去
+  - Unity情報カテゴリ: 5→4ツール
+  - 統一されたアセット解析フローの確立
+
 ## [1.0.6] - 2025-08-19
 
 ### Removed
@@ -84,7 +104,7 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 - **レスポンス標準化**: 全ツール実装で無名クラスを `StandardResponse` クラスに置き換え
 - **型安全性**: 無名オブジェクト戻り値を削除してコンパイル時型チェックを改善
 - **JSON シリアライゼーション**: 一貫したレスポンス構造でSystem.Text.Json互換性を強化
-- **コード一貫性**: 25個のビルトインツール全体でレスポンス形式を統一
+- **コード一貫性**: 24個のビルトインツール全体でレスポンス形式を統一
 - **ビルド管理ツール**: 4つの新しいビルド関連ツールを追加
 
 ### 技術的改善
@@ -108,13 +128,13 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 - **エラーハンドリング**: タイムアウトサポート付きの堅牢なエラー処理
 - **CORS サポート**: Webベースクライアント用の設定可能なCORS
 
-#### ビルトインツール（25ツール）
+#### ビルトインツール（24ツール）
 - **Unity情報ツール（5ツール）**
   - `get_unity_info`: Unity エディターとプロジェクト情報
   - `get_scene_info`: 現在のシーン構造分析
-  - `get_hierarchy_analysis`: 指定GameObjectとその子階層の詳細分析
+  - `detect_missing_scripts`: Missing Script検出
   - `get_game_object_info`: 指定GameObjectの詳細情報
-  - `get_prefab_info`: 指定Prefabの詳細情報
+
 
 - **アセット管理ツール（4ツール）**
   - `refresh_assets`: アセットデータベースのリフレッシュ

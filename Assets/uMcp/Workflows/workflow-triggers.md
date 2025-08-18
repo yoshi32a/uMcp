@@ -56,7 +56,7 @@
 #### キーワード: "scene", "シーン", "GameObject"
 - ツール候補:
   - get_scene_info
-  - get_hierarchy_analysis
+  - get_game_object_info
   - get_game_object_info
 
 #### キーワード: "documentation", "document", "ドキュメント", "Unity API", "Manual", "ScriptReference"

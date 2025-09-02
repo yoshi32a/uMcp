@@ -6,7 +6,7 @@ namespace uMCP.Editor
     [FilePath("ProjectSettings/uMcpSettings.asset", FilePathAttribute.Location.ProjectFolder)]
     public class UMcpSettings : ScriptableSingleton<UMcpSettings>
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.9";
 
         [Header("Server Configuration")] [Tooltip("The IP address to bind the server to. Use 127.0.0.1 for local access only.")]
         public string ipAddress = "127.0.0.1";
@@ -18,7 +18,7 @@ namespace uMCP.Editor
         public string serverPath = "/umcp/";
 
         [Header("Features")] [Tooltip("Show server logs in the Unity console.")]
-        public bool showServerLog = true;
+        public bool showServerLog = false;
 
         [Tooltip("Load built-in MCP tools automatically.")]
         public bool enableDefaultTools = true;

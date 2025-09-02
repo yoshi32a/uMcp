@@ -5,6 +5,14 @@ Unity MCP Serverのすべての重要な変更はこのファイルに記録さ�
 形式は [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) に基づいており、
 このプロジェクトは [セマンティック バージョニング](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [1.0.9] - 2025-09-02
+
+### Changed
+- **バージョン情報更新**: パッケージバージョンを1.0.8から1.0.9に更新
+  - package.json のバージョンフィールドを更新
+  - UMcpSettings.cs の Version 定数を更新
+  - Unity Package Manager での新バージョン認識対応
+
 ## [1.0.8] - 2025-08-18
 
 ### Fixed

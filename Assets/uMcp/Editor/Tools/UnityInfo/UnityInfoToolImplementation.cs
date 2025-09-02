@@ -579,10 +579,8 @@ namespace uMCP.Editor.Tools
                 {
                     info.AppendLine($"\n### 📋 シーン: {sceneGroup.Key}");
 
-                    int displayCount = 0;
                     foreach (var item in sceneGroup.OrderByDescending(x => x.MissingCount).Take(50))
                     {
-                        displayCount++;
                         var icon = item.GameObject.activeInHierarchy ? "🔴" : "⚫";
                         info.AppendLine($"{icon} **{item.Path}**");
                         info.AppendLine($"   Missing: {item.MissingCount}個 / 全{item.TotalComponents}個のコンポーネント");

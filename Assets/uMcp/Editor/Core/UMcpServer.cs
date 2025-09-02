@@ -856,7 +856,7 @@ namespace uMCP.Editor.Core
         {
             if (settings.showServerLog)
             {
-                Debug.Log($"[uMCP] {message}");
+                // Debug.Log($"[uMCP] {message}");
             }
         }
 
